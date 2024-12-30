@@ -6,7 +6,9 @@
     "build": "cross-env NODE_ENV=production react-router build",
     "dev": "react-router dev",
     "start": "cross-env NODE_ENV=production react-router-serve ./build/server/index.js",
-    "typecheck": "react-router typegen && tsc"
+    "typecheck": "react-router typegen && tsc",
+    "docker:build": "docker build -t story-tetris .",
+    "docker:run": "docker run -p 3000:3000 story-tetris"
   },
   "dependencies": {
     "@react-router/node": "^7.1.1",
