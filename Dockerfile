@@ -1,6 +1,6 @@
-# node and npm versions are defined in the .env file
-ARG NODE_VERSION
-ARG NPM_VERSION
+# node and npm versions are defined in the .env file. These are default values.
+ARG NODE_VERSION=23.5.0
+ARG NPM_VERSION=11.0.0
 
 FROM node:${NODE_VERSION} AS development-dependencies-env
 COPY . /app

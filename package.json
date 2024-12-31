@@ -7,9 +7,11 @@
     "dev": "react-router dev",
     "start": "react-router-serve ./build/server/index.js",
     "typecheck": "react-router typegen && tsc",
-    "docker:build": "export $(cat .env | xargs) && docker build --build-arg NODE_VERSION=$NODE_VERSION --build-arg NPM_VERSION=$NPM_VERSION -t story-tetris .",
-    "docker:build:no-cache": "export $(cat .env | xargs) && docker build --no-cache --build-arg NODE_VERSION=$NODE_VERSION --build-arg NPM_VERSION=$NPM_VERSION -t story-tetris .",
-    "docker:run": "docker run -p 3000:3000 story-tetris"
+    "docker:build": "docker-compose build",
+    "docker:build:no-cache": "docker-compose build --no-cache",
+    "docker:start": "docker-compose up -d",
+    "docker:start:watch": "docker-compose up",
+    "docker:stop": "docker-compose down"
   },
   "dependencies": {
     "@react-router/node": "^7.1.1",
