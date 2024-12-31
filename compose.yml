@@ -1,3 +1,5 @@
+name: story-tetris
+
 services:
   story-tetris-service:
     image: story-tetris-image:latest  # Use the image built in the previous step
