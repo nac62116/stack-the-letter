@@ -20,18 +20,18 @@ export function renderBlock(options: {
 }) {
   const { block, position, remove = false } = options;
   let rowIndex = 0;
-  for (const row of block) {
+  for (const blockRow of block) {
     let columnIndex = 0;
-    for (const cell of row) {
-      if (cell === 1) {
-        const element = document.getElementById(
+    for (const blockCell of blockRow) {
+      if (blockCell === 1) {
+        const boardCell = document.getElementById(
           `${position.y + rowIndex}-${position.x + columnIndex}`
         );
-        if (element !== null) {
+        if (boardCell !== null) {
           if (remove) {
-            element.classList.remove("bg-green-700");
+            boardCell.classList.remove("bg-green-700");
           } else {
-            element.classList.add("bg-green-700");
+            boardCell.classList.add("bg-green-700");
           }
         }
       }
