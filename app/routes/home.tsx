@@ -19,9 +19,9 @@ export function meta({ data: { storyHeadline } }: Route.MetaArgs) {
 
 export async function loader({}: Route.LoaderArgs) {
   const story = {
-    headline: "Hallo Miri!",
+    headline: "Hallo Ronja!",
     message: "Das ist der Story Tetris Prototyp.",
-    regards: "Liebe Grüße",
+    regards: "Hab dich lieb!",
   } as const;
 
   const streamOfBlocks = [
@@ -244,7 +244,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
   return (
     <div className="w-full h-screen grid place-items-center gap-4 p-4">
       {/* TODO: grid-cols and -rows depending on board size */}
-      <div className="grid grid-cols-44 grid-rows-25 place-items-center gap-1">
+      <div className="grid grid-cols-45 grid-rows-25 place-items-center gap-1">
         {boardRef.current.map((row, rowIndex) =>
           row.map((cell, columnIndex) => (
             <div
