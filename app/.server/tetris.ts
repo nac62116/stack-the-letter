@@ -32,8 +32,12 @@ export function transformTextToTetrisBlock(text: string): TetrisBlock {
   ];
   for (const word of words) {
     const letters = word.split("");
-    // seperator between words
-    block = block.map((line, index) => [...line, ...blockAlphabet[" "][index]]);
+    // seperator between words but not for the first word
+    block = block.map((line, index) =>
+      line[0] !== undefined
+        ? [...line, ...blockAlphabet[" "][index]]
+        : [...line]
+    );
     for (const letter of letters) {
       if (letter.toLowerCase() in blockAlphabet) {
         const typedLetter = letter.toLowerCase() as keyof typeof blockAlphabet;
@@ -48,6 +52,10 @@ export function transformTextToTetrisBlock(text: string): TetrisBlock {
                 ...block,
               ]}`
             );
+            return [...letterAsBlock[index]];
+          }
+          // No seperator if its the first letter
+          if (line[0] === undefined) {
             return [...letterAsBlock[index]];
           }
           return [

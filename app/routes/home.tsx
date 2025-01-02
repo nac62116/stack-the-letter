@@ -3,7 +3,12 @@ import type { Route } from "./+types/home";
 import { getTetrisBoard, transformTextToTetrisBlock } from "~/.server/tetris";
 import React from "react";
 import type { ArrayElement } from "~/shared/type-helper";
-import { addBlockToBoard, removeBlockFromBoard } from "~/.client/board";
+import {
+  addBlockToBoard,
+  hasReachedLeftEdge,
+  hasReachedRightEdge,
+  removeBlockFromBoard,
+} from "~/.client/board";
 
 export function meta({ data: { storyHeadline } }: Route.MetaArgs) {
   return [
@@ -131,8 +136,8 @@ export default function Home({ loaderData }: Route.ComponentProps) {
       if (leftRef.current) {
         setLeft(false);
         // Moving block to the left only if it is not at the left edge of the board
-        if (positionRef.current.x > -2) {
-          // TODO: Check if block collides with other blocks
+        if (hasReachedLeftEdge(positionRef.current) === false) {
+          // TODO: Check if most left cells would collide with other board cells
           const boardWithoutCurrentBlock = removeBlockFromBoard({
             board: boardRef.current,
             block: blockRef.current,
@@ -159,10 +164,13 @@ export default function Home({ loaderData }: Route.ComponentProps) {
         setRight(false);
         // Moving block to the right only if it is not at the right edge of the board
         if (
-          positionRef.current.x + blockRef.current[0].length <
-          tetrisBoard[0].length
+          hasReachedRightEdge({
+            board: boardRef.current,
+            block: blockRef.current,
+            position: positionRef.current,
+          }) === false
         ) {
-          // TODO: Check if block collides with other blocks
+          // TODO: Check if most right cells would collide with other board cells
           const boardWithoutCurrentBlock = removeBlockFromBoard({
             board: boardRef.current,
             block: blockRef.current,
@@ -184,6 +192,10 @@ export default function Home({ loaderData }: Route.ComponentProps) {
           });
         }
       }
+      // TODO: Check if block collides with other blocks
+      // What i want:
+      // - Each cell of block should move down if it is able to
+      // - If every cell of block cannot move down anymore -> next block
       // Move block down every half second
       if (timestamp - lastDownMoveRef.current >= 200) {
         setLastDownMove(timestamp);
@@ -199,7 +211,6 @@ export default function Home({ loaderData }: Route.ComponentProps) {
           setBlockIndex(blockIndexRef.current + 1);
           setPosition(initialPosition);
         } else {
-          // TODO: Check if block collides with other blocks
           const boardWithoutCurrentBlock = removeBlockFromBoard({
             board: boardRef.current,
             block: blockRef.current,
@@ -233,7 +244,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
   return (
     <div className="w-full h-screen grid place-items-center gap-4 p-4">
       {/* TODO: grid-cols and -rows depending on board size */}
-      <div className="grid grid-cols-46 grid-rows-25 place-items-center gap-1">
+      <div className="grid grid-cols-44 grid-rows-25 place-items-center gap-1">
         {boardRef.current.map((row, rowIndex) =>
           row.map((cell, columnIndex) => (
             <div

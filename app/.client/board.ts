@@ -51,3 +51,22 @@ export function addBlockToBoard(options: {
   );
   return newBoard;
 }
+
+export function hasReachedRightEdge(options: {
+  board: Awaited<ReturnType<typeof loader>>["tetrisBoard"];
+  block: Awaited<ReturnType<typeof loader>>["streamOfBlocks"][0];
+  position: {
+    x: number;
+    y: number;
+  };
+}) {
+  const { board, block, position } = options;
+  const blockWidth = block[0].length;
+  const blockRightEdge = position.x + blockWidth;
+  const boardWidth = board[0].length;
+  return blockRightEdge >= boardWidth;
+}
+
+export function hasReachedLeftEdge(position: { x: number; y: number }) {
+  return position.x <= 0;
+}
