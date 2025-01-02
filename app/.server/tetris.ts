@@ -29,7 +29,7 @@ export function transformTextToTetrisBlock(text: string): TetrisBlock {
     [], 
     [], 
     [],
-];
+  ];
   for (const word of words) {
     const letters = word.split("");
     // seperator between words
