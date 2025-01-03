@@ -99,8 +99,11 @@ function addBlockToBoard(options: {
         if (newBoard[rowIndex][columnIndex] === 1) {
           // Deactivate the current block cell for following render cycles with the same block
           newBlock[rowIndex - position.y][columnIndex - position.x] = 0;
-          // if we exceeded the top boundary of the board with this move, we have a game over.
-          if (newBoard[rowIndex - 1] === undefined) {
+          // if we exceeded the top boundary of the rendered board with this move,
+          // we have a game over.
+          // Note, that we have $BLOCK_HEIGHT non-active cells at the top of the board
+          // to simplify the game logic.
+          if (rowIndex - 1 < block.length) {
             isGameOver = true;
           } else {
             newBoard[rowIndex - 1][columnIndex] = 1;

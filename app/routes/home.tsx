@@ -259,6 +259,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
           const nextBlock = streamOfBlocks[currentBlockIndex + 1];
           if (nextBlock === undefined) {
             // TODO: You won the game
+            alert("You won the game");
             setRunning(false);
             return;
           }
@@ -268,6 +269,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
         }
         if (state === "gameOver") {
           // TODO: You lost the game
+          alert("Game Over");
           setRunning(false);
           return;
         }
