@@ -1,4 +1,27 @@
-export const blockAlphabet = {
+// Tetris block
+// Five rows for each letter
+// prettier-ignore
+export type TetrisBlock = [
+    number[],
+    number[],
+    number[],
+    number[],
+    number[]
+];
+export const LINE_HEIGHT: TetrisBlock["length"] = 5;
+export const DEFAULT_BLOCK: TetrisBlock = [
+  [1, 1, 1],
+  [0, 0, 1],
+  [0, 1, 1],
+  [0, 0, 0],
+  [0, 1, 0],
+];
+// More generic type of a tetris block to mutate it inside .server/tetris-load.ts
+export type GenericTetrisBlock = Array<(number | undefined)[]>;
+
+export const blockAlphabet: {
+  [key: string]: TetrisBlock;
+} = {
   a: [
     [1, 1, 1],
     [1, 0, 1],
@@ -340,4 +363,4 @@ export const blockAlphabet = {
     [0, 0],
     [0, 0],
   ],
-} as const;
+};

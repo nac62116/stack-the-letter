@@ -1,29 +1,15 @@
-import { blockAlphabet } from "./alphabet";
-
-// Tetris block
-// Five rows for each letter
-type Matrix = Array<(number | undefined)[]>;
-// prettier-ignore
-type TetrisBlock = [
-    number[],
-    number[],
-    number[],
-    number[],
-    number[]
-];
-const LINE_HEIGHT = 5;
-const DEFAULT_BLOCK = [
-  [...blockAlphabet["?"][0]],
-  [...blockAlphabet["?"][1]],
-  [...blockAlphabet["?"][2]],
-  [...blockAlphabet["?"][3]],
-  [...blockAlphabet["?"][4]],
-];
+import {
+  blockAlphabet,
+  DEFAULT_BLOCK,
+  LINE_HEIGHT,
+  type GenericTetrisBlock,
+  type TetrisBlock,
+} from "./alphabet";
 
 export function transformTextToTetrisBlock(text: string): TetrisBlock {
   const words = text.split(" ");
   // prettier-ignore
-  let block: Matrix = [
+  let block: TetrisBlock = [
     [], 
     [], 
     [], 
@@ -34,15 +20,22 @@ export function transformTextToTetrisBlock(text: string): TetrisBlock {
     const letters = word.split("");
     // seperator between words but not for the first word
     block = block.map((line, index) =>
-      line[0] !== undefined
-        ? [...line, ...blockAlphabet[" "][index]]
-        : [...line]
-    );
+      // Runtime check to verify below assertion to TetrisBlock type (even if it wont ever happen)
+      index < LINE_HEIGHT
+        ? line[0] !== undefined
+          ? [...line, ...blockAlphabet[" "][index]]
+          : [...line]
+        : undefined
+    ) as TetrisBlock;
     for (const letter of letters) {
       if (letter.toLowerCase() in blockAlphabet) {
         const typedLetter = letter.toLowerCase() as keyof typeof blockAlphabet;
         const letterAsBlock = [...blockAlphabet[typedLetter]];
         block = block.map((line, index) => {
+          // Runtime check to verify below assertion to TetrisBlock type (even if it wont ever happen)
+          if (index >= LINE_HEIGHT) {
+            return undefined;
+          }
           if (line.some((letter) => letter === undefined)) {
             return [...letterAsBlock[index]];
           }
@@ -65,7 +58,7 @@ export function transformTextToTetrisBlock(text: string): TetrisBlock {
             // Next letter
             ...letterAsBlock[index],
           ];
-        });
+        }) as TetrisBlock;
       } else {
         console.error(
           `Letter ${letter} not found in alphabet and was left out.`
@@ -75,17 +68,18 @@ export function transformTextToTetrisBlock(text: string): TetrisBlock {
   }
   if (block.length !== LINE_HEIGHT) {
     console.error("Block has wrong line height");
-    return DEFAULT_BLOCK as TetrisBlock;
+    return DEFAULT_BLOCK;
   }
   if (block.some((line, index) => line[index] === undefined)) {
     console.error("Block has undefined characters inside line");
-    return DEFAULT_BLOCK as TetrisBlock;
+    return DEFAULT_BLOCK;
   }
-  return block as TetrisBlock;
+  return block;
 }
 
 // Tetris board
 type TetrisBoard = number[][];
+// Should be at least 3 times the line height or the game gets really hard
 const BOARD_HEIGHT = LINE_HEIGHT * 5;
 const MINIMUM_BOARD_WIDTH = 10;
 
