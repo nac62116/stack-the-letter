@@ -1,3 +1,4 @@
+// TODO: Double the resolution of the blocks
 // Tetris block
 // Five rows for each letter
 // prettier-ignore
