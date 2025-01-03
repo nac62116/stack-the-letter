@@ -17,8 +17,6 @@ export const DEFAULT_BLOCK: TetrisBlock = [
   [0, 0, 0],
   [0, 1, 0],
 ];
-// More generic type of a tetris block to mutate it inside .server/tetris-load.ts
-export type GenericTetrisBlock = Array<(number | undefined)[]>;
 
 export const blockAlphabet: {
   [key: string]: TetrisBlock;

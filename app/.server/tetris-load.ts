@@ -2,7 +2,6 @@ import {
   blockAlphabet,
   DEFAULT_BLOCK,
   LINE_HEIGHT,
-  type GenericTetrisBlock,
   type TetrisBlock,
 } from "./alphabet";
 
