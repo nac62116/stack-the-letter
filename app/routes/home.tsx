@@ -201,7 +201,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
         // TODO: Set difficulty level here.
         // Either on load if it should not be changable during render cycle
         // -> Loader or .server/tetris-load.ts
-        // Or on runtime if it should be changable during render cycle
+        // Or on runtime if it should be changable during render cycle (f.e. by the down arrow key)
         // -> States and .client/tetris-runtime.ts
         // Current Setting is down movement every 200ms
         down: timestamp - lastDownMoveRef.current >= 200,
@@ -299,6 +299,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
 
   return (
     <div className="w-full grid justify-center text-center gap-4 p-4">
+      {/* TODO: Styling */}
       <h1>Story Tetris</h1>
       <div>
         {gameState === "idle" ? (
