@@ -14,14 +14,19 @@ import { invariantResponse } from "~/.server/error-helper";
 import { gridCols, gridRows } from "~/shared/dynamic-grid-map";
 import { LINE_HEIGHT, type TetrisBlock } from "~/.server/alphabet";
 
-export function meta({ data: { storyHeadline } }: Route.MetaArgs) {
+export function meta({
+  data: {
+    story: { headline },
+  },
+}: Route.MetaArgs) {
   return [
     { title: "Story Tetris" },
-    { name: "description", content: storyHeadline },
+    { name: "description", content: headline },
   ];
 }
 
 export async function loader({}: Route.LoaderArgs) {
+  const author = "Colin";
   const story = {
     headline: "Hallo Ronja!",
     message: "Das ist der Story Tetris Prototyp.",
@@ -69,17 +74,16 @@ export async function loader({}: Route.LoaderArgs) {
     );
   }
 
-  console.log(tetrisBoard.length, tetrisBoard[0].length);
-
   return {
-    storyHeadline: story.headline,
+    author,
+    story,
     streamOfBlocks,
     tetrisBoard,
   };
 }
 
 export default function Home({ loaderData }: Route.ComponentProps) {
-  const { streamOfBlocks, tetrisBoard } = loaderData;
+  const { author, story, streamOfBlocks, tetrisBoard } = loaderData;
 
   // States to manage board, current block and automatic down movement
   const initialBoard = tetrisBoard;
@@ -120,12 +124,13 @@ export default function Home({ loaderData }: Route.ComponentProps) {
     _setLastDownMove(lastDownMove);
   };
 
-  // State to determine if game is running
-  const [running, _setRunning] = React.useState(false);
-  const runningRef = React.useRef(running);
-  const setRunning = (running: boolean) => {
-    runningRef.current = running;
-    _setRunning(running);
+  // Game state
+  type GameState = "idle" | "running" | "won" | "lost";
+  const [gameState, _setGameState] = React.useState<GameState>("idle");
+  const gameStateRef = React.useRef(gameState);
+  const setGameState = (state: GameState) => {
+    gameStateRef.current = state;
+    _setGameState(state);
   };
 
   // States for user movement
@@ -142,12 +147,16 @@ export default function Home({ loaderData }: Route.ComponentProps) {
     _setRight(right);
   };
 
+  // State to hide the how-to-play instructions
+  const [showHowToPlay, setShowHowToPlay] = React.useState(true);
+
   // Handler for user input
   React.useEffect(() => {
     const keydown = (event: KeyboardEvent) => {
       if (event.key === "Enter") {
-        if (runningRef.current === false) {
-          setRunning(true);
+        if (gameStateRef.current !== "running") {
+          setShowHowToPlay(false);
+          setGameState("running");
           setBoard(initialBoard);
           setBlock(initialBlock);
           setBlockIndex(0);
@@ -156,7 +165,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
         }
       }
       if (event.key === "Escape") {
-        setRunning(false);
+        setGameState("idle");
       }
       if (event.key === "ArrowLeft") {
         setLeft(true);
@@ -258,20 +267,14 @@ export default function Home({ loaderData }: Route.ComponentProps) {
         if (state === "nextBlockPlease") {
           const nextBlock = streamOfBlocks[currentBlockIndex + 1];
           if (nextBlock === undefined) {
-            // TODO: You won the game
-            alert("You won the game");
-            setRunning(false);
-            return;
+            setGameState("won");
           }
           setBlock(nextBlock);
           setBlockIndex(currentBlockIndex + 1);
           setPosition(initialPosition);
         }
         if (state === "gameOver") {
-          // TODO: You lost the game
-          alert("Game Over");
-          setRunning(false);
-          return;
+          setGameState("lost");
         }
         // The second check in this condition prooves the type assertion on runtime
         if (
@@ -281,47 +284,105 @@ export default function Home({ loaderData }: Route.ComponentProps) {
           setBlock(newBlock as TetrisBlock);
         }
       }
-      if (runningRef.current) {
+      if (gameStateRef.current === "running") {
         window.requestAnimationFrame(step);
       }
     };
-    if (runningRef.current) {
+    if (gameStateRef.current === "running") {
       window.requestAnimationFrame(step);
     }
   };
 
   return (
-    <div className="w-full h-screen grid place-items-center gap-4 p-4">
-      <div
-        // The top, left and bottom boundary of the board is filled with active cells
-        // and the top boundary is filled with $BLOCK_HEIGHT non-active cells
-        // to simplify the game logic.
-        // These boundaries are not rendered.
-        // Thats why we use gridRows[boardRef.current.length - 2 - initialBlock.length]
-        // and gridCols[boardRef.current[0].length - 3] here.
-        className={`grid ${
-          gridRows[boardRef.current.length - 2 - initialBlock.length]
-        } ${gridCols[boardRef.current[0].length - 3]} place-items-center gap-1`}
-      >
-        {boardRef.current.map((row, rowIndex) =>
-          row.map((cell, columnIndex) =>
+    <div className="w-full grid justify-center text-center gap-4 p-4">
+      <h1>Story Tetris</h1>
+      <div>
+        {gameState === "idle" ? (
+          <>
+            <p>
+              {author} wants to tell you a story named "{story.headline}"
+            </p>
+            <p>But the story is scrambled into tetris blocks...</p>
+            <p>Press Enter to take a look at it.</p>
+          </>
+        ) : gameState === "won" ? (
+          <>
+            <h1>You got it!</h1>
+            <p>Here is the full story from {author}</p>
+            <h2>{story.headline}</h2>
+            <p>{story.message}</p>
+            <p>{story.regards}</p>
+            <p>Press Enter to try again.</p>
+          </>
+        ) : gameState === "lost" ? (
+          <>
+            <h1>Cliff hanger</h1>
+            <p>Your blocks are stacked to the top.</p>
+            <p>But your story wasn't finished yed.</p>
+            <p>Press Enter to try again.</p>
+          </>
+        ) : (
+          <div
             // The top, left and bottom boundary of the board is filled with active cells
             // and the top boundary is filled with $BLOCK_HEIGHT non-active cells
             // to simplify the game logic.
-            // These boundaries are not rendered. Thats why we return null here.
-            rowIndex >= initialBlock.length &&
-            rowIndex !== boardRef.current.length - 1 &&
-            columnIndex !== 0 &&
-            columnIndex !== boardRef.current[0].length - 1 ? (
-              <div
-                key={`${rowIndex}-${columnIndex}`}
-                className={`${
-                  cell === 1 ? "bg-green-700" : "bg-inherit"
-                } w-4 h-4 border border-gray-600 rounded-sm`}
-              />
-            ) : null
-          )
+            // These boundaries are not rendered.
+            // Thats why we use gridRows[boardRef.current.length - 2 - initialBlock.length]
+            // and gridCols[boardRef.current[0].length - 3] here.
+            className={`grid ${
+              gridRows[boardRef.current.length - 2 - initialBlock.length]
+            } ${
+              gridCols[boardRef.current[0].length - 3]
+            } place-items-center gap-1`}
+          >
+            {boardRef.current.map((row, rowIndex) =>
+              row.map((cell, columnIndex) =>
+                // The top, left and bottom boundary of the board is filled with active cells
+                // and the top boundary is filled with $BLOCK_HEIGHT non-active cells
+                // to simplify the game logic.
+                // These boundaries are not rendered. Thats why we return null here.
+                rowIndex >= initialBlock.length &&
+                rowIndex !== boardRef.current.length - 1 &&
+                columnIndex !== 0 &&
+                columnIndex !== boardRef.current[0].length - 1 ? (
+                  <div
+                    key={`${rowIndex}-${columnIndex}`}
+                    className={`${
+                      cell === 1 ? "bg-green-700" : "bg-inherit"
+                    } w-4 h-4 border border-gray-600 rounded-sm`}
+                  />
+                ) : null
+              )
+            )}
+          </div>
         )}
+      </div>
+      <div className="group">
+        <label
+          htmlFor="how-to-play"
+          className="flex justify-center items-center gap-2 cursor-pointer"
+        >
+          <div className="group-has-[:checked]:-rotate-90 rotate-90">
+            &#x27BA;
+          </div>
+          <div>How to play?</div>
+          <div className="group-has-[:checked]:-rotate-90 rotate-90">
+            &#x27BA;
+          </div>
+        </label>
+        <ul className="group-has-[:checked]:block hidden">
+          <li>Press Enter to start the game.</li>
+          <li>Press Escape to stop the game.</li>
+          <li>Use arrow keys to move the tetris blocks.</li>
+          <li>Try to find out what {author} wants to tell you.</li>
+        </ul>
+        <input
+          type="checkbox"
+          id="how-to-play"
+          className="absolute w-0 h-0 opacity-0"
+          checked={showHowToPlay}
+          onChange={(event) => setShowHowToPlay(event.target.checked)}
+        />
       </div>
     </div>
   );
