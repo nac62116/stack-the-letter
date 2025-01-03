@@ -79,8 +79,8 @@ export function transformTextToTetrisBlock(text: string): TetrisBlock {
 
 // Tetris board
 type TetrisBoard = number[][];
-// Should be at least 3 times the line height or the game gets really hard
-const BOARD_HEIGHT = LINE_HEIGHT * 5;
+// Should be at least 4 times the line height or the game gets really hard
+const BOARD_HEIGHT = LINE_HEIGHT * 6;
 const MINIMUM_BOARD_WIDTH = 10;
 
 export function getTetrisBoard(blocks: TetrisBlock[]): TetrisBoard {
@@ -97,8 +97,17 @@ export function getTetrisBoard(blocks: TetrisBlock[]): TetrisBoard {
 
   const boardWidth = widestBlockWidth + 2;
   const tetrisBoard: TetrisBoard = [
-    ...Array.from({ length: BOARD_HEIGHT }, () =>
-      Array.from({ length: boardWidth }, () => 0)
+    ...Array.from({ length: BOARD_HEIGHT }, (_rowValue, rowIndex) =>
+      // The board boundaries are filled with active cells to simplify the game logic
+      // at the moment where a block reaches these boundaries.
+      // These boundaries are not rendered (see routes/home.tsx).
+      Array.from({ length: boardWidth }, (_cellValue, columnIndex) =>
+        rowIndex === BOARD_HEIGHT - 1 ||
+        columnIndex === 0 ||
+        columnIndex === boardWidth - 1
+          ? 1
+          : 0
+      )
     ),
   ];
 

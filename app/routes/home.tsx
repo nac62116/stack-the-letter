@@ -12,7 +12,7 @@ import {
 } from "~/.client/tetris-runtime";
 import { invariantResponse } from "~/.server/error-helper";
 import { gridCols, gridRows } from "~/shared/dynamic-grid-map";
-import type { TetrisBlock } from "~/.server/alphabet";
+import { LINE_HEIGHT, type TetrisBlock } from "~/.server/alphabet";
 
 export function meta({ data: { storyHeadline } }: Route.MetaArgs) {
   return [
@@ -35,21 +35,25 @@ export async function loader({}: Route.LoaderArgs) {
   ];
 
   const tetrisBoard = getTetrisBoard(streamOfBlocks);
+
+  // The rendered tetris board is smaller than the actual tetris board
+  // because the actual tetris board has active cells at the left, right and bottom boundaries
+  // and $LINE_HEIGHT non-acitve rows on the top to drop in the blocks
+  const renderedTetrisBoardWidth = tetrisBoard[0].length - 2;
+  const renderedTetrisBoardHeight = tetrisBoard.length - LINE_HEIGHT - 1;
   // I have to limit the tetris board width and height
   // because of limited grid-rows and grid-cols className definitions
   // inside shared/dynamic-grid-map.ts
   // and the limited gridTemplateRows and gridTemplateColumns definitions
   // inside the tailwind.config.ts
-  const tetrisBoardWidth = tetrisBoard[0].length;
-  const tetrisBoardHeight = tetrisBoard.length;
-  const tooWide = tetrisBoardWidth > Object.keys(gridCols).length;
-  const tooHigh = tetrisBoardHeight > Object.keys(gridRows).length;
+  const tooWide = renderedTetrisBoardWidth > Object.keys(gridCols).length;
+  const tooHigh = renderedTetrisBoardHeight > Object.keys(gridRows).length;
   if (tooWide) {
     console.error(
       "Tetris board is too wide. Either use shorter headline, regards or words in your story or define more grid-cols in shared/dynamic-grid-map.ts and more gridTemplateColumns in tailwind.config.ts"
     );
     invariantResponse(
-      tetrisBoardWidth <= Object.keys(gridCols).length,
+      renderedTetrisBoardWidth <= Object.keys(gridCols).length,
       "Bad request",
       { status: 400 }
     );
@@ -59,7 +63,7 @@ export async function loader({}: Route.LoaderArgs) {
       "Tetris board is too high. Either use shorter line and block height inside tetris or define more grid-rows in shared/dynamic-grid-map.ts and more gridTemplateRows in tailwind.config.ts"
     );
     invariantResponse(
-      tetrisBoardHeight <= Object.keys(gridRows).length,
+      renderedTetrisBoardHeight - LINE_HEIGHT <= Object.keys(gridRows).length,
       "Bad request",
       { status: 400 }
     );
@@ -98,7 +102,11 @@ export default function Home({ loaderData }: Route.ComponentProps) {
     blockIndexRef.current = blockIndex;
     _setBlockIndex(blockIndex);
   };
-  const initialPosition = { x: 0, y: initialBlock.length * -1 };
+  // The top, left and bottom boundary of the board is filled with active cells
+  // and the top boundary is filled with $BLOCK_HEIGHT non-active cells
+  // to simplify the game logic.
+  // These boundaries are not rendered. Thats why we use x: 1 here.
+  const initialPosition = { x: 1, y: 0 };
   const [position, _setPosition] = React.useState(initialPosition);
   const positionRef = React.useRef(position);
   const setPosition = (position: { x: number; y: number }) => {
@@ -141,14 +149,14 @@ export default function Home({ loaderData }: Route.ComponentProps) {
         if (runningRef.current === false) {
           setRunning(true);
           setBoard(initialBoard);
+          setBlock(initialBlock);
+          setBlockIndex(0);
+          setPosition(initialPosition);
           startGame();
         }
       }
       if (event.key === "Escape") {
         setRunning(false);
-        setBlock(initialBlock);
-        setBlockIndex(0);
-        setPosition(initialPosition);
       }
       if (event.key === "ArrowLeft") {
         setLeft(true);
@@ -227,7 +235,27 @@ export default function Home({ loaderData }: Route.ComponentProps) {
       // Moving block down with the frequency defined in currentMovementState
       if (currentMovementState.down) {
         setLastDownMove(timestamp);
-        if (hasReachedBoardEdge("bottom", currentBoardState)) {
+        const {
+          board: newBoard,
+          // This is the consumed block
+          // -> every cell that has arrived at another exisiting cell was cut off
+          block: newBlock,
+          state,
+        } = moveBlock("down", currentBoardState);
+        // TODO: Check if there are fully active rows except the last row
+        // -> If so, remove them and move all rows above down
+        // -> Add follwoing comment to this function the get the functionality of the last active row
+        /**
+         * The last row is filled with active cells to simplify the game logic.
+         * This row is not rendered. Thats why we dont remove it here.
+         */
+        setBoard(newBoard);
+        setPosition({
+          x: currentBoardState.position.x,
+          y: currentBoardState.position.y + 1,
+        });
+        // This state is returned when the block was fully consumed (aka cannot move anymore)
+        if (state === "nextBlockPlease") {
           const nextBlock = streamOfBlocks[currentBlockIndex + 1];
           if (nextBlock === undefined) {
             // TODO: You won the game
@@ -237,45 +265,18 @@ export default function Home({ loaderData }: Route.ComponentProps) {
           setBlock(nextBlock);
           setBlockIndex(currentBlockIndex + 1);
           setPosition(initialPosition);
-        } else {
-          const {
-            board: newBoard,
-            // This is the consumed block
-            // -> every cell that has arrived at another exisiting cell was cut off
-            block: newBlock,
-            state,
-          } = moveBlock("down", currentBoardState);
-          // TODO: Check if there are fully active rows
-          // -> If so, remove them and move all rows above down
-          setBoard(newBoard);
-          setPosition({
-            x: currentBoardState.position.x,
-            y: currentBoardState.position.y + 1,
-          });
-          // This state is returned when the block was fully consumed (aka cannot move anymore)
-          if (state === "nextBlockPlease") {
-            const nextBlock = streamOfBlocks[currentBlockIndex + 1];
-            if (nextBlock === undefined) {
-              // TODO: You won the game
-              setRunning(false);
-              return;
-            }
-            setBlock(nextBlock);
-            setBlockIndex(currentBlockIndex + 1);
-            setPosition(initialPosition);
-          }
-          if (state === "gameOver") {
-            // TODO: You lost the game
-            setRunning(false);
-            return;
-          }
-          // The second check in this condition prooves the type assertion on runtime
-          if (
-            state === "running" &&
-            newBlock.length === currentBoardState.block.length
-          ) {
-            setBlock(newBlock as TetrisBlock);
-          }
+        }
+        if (state === "gameOver") {
+          // TODO: You lost the game
+          setRunning(false);
+          return;
+        }
+        // The second check in this condition prooves the type assertion on runtime
+        if (
+          state === "running" &&
+          newBlock.length === currentBoardState.block.length
+        ) {
+          setBlock(newBlock as TetrisBlock);
         }
       }
       if (runningRef.current) {
@@ -289,21 +290,35 @@ export default function Home({ loaderData }: Route.ComponentProps) {
 
   return (
     <div className="w-full h-screen grid place-items-center gap-4 p-4">
-      {/* TODO: grid-cols and -rows depending on board size */}
       <div
-        className={`grid ${gridRows[boardRef.current.length - 1]} ${
-          gridCols[boardRef.current[0].length - 1]
-        } place-items-center gap-1`}
+        // The top, left and bottom boundary of the board is filled with active cells
+        // and the top boundary is filled with $BLOCK_HEIGHT non-active cells
+        // to simplify the game logic.
+        // These boundaries are not rendered.
+        // Thats why we use gridRows[boardRef.current.length - 2 - initialBlock.length]
+        // and gridCols[boardRef.current[0].length - 3] here.
+        className={`grid ${
+          gridRows[boardRef.current.length - 2 - initialBlock.length]
+        } ${gridCols[boardRef.current[0].length - 3]} place-items-center gap-1`}
       >
         {boardRef.current.map((row, rowIndex) =>
-          row.map((cell, columnIndex) => (
-            <div
-              key={`${rowIndex}-${columnIndex}`}
-              className={`${
-                cell === 1 ? "bg-green-700" : "bg-inherit"
-              } w-4 h-4 border border-gray-600 rounded-sm`}
-            />
-          ))
+          row.map((cell, columnIndex) =>
+            // The top, left and bottom boundary of the board is filled with active cells
+            // and the top boundary is filled with $BLOCK_HEIGHT non-active cells
+            // to simplify the game logic.
+            // These boundaries are not rendered. Thats why we return null here.
+            rowIndex >= initialBlock.length &&
+            rowIndex !== boardRef.current.length - 1 &&
+            columnIndex !== 0 &&
+            columnIndex !== boardRef.current[0].length - 1 ? (
+              <div
+                key={`${rowIndex}-${columnIndex}`}
+                className={`${
+                  cell === 1 ? "bg-green-700" : "bg-inherit"
+                } w-4 h-4 border border-gray-600 rounded-sm`}
+              />
+            ) : null
+          )
         )}
       </div>
     </div>

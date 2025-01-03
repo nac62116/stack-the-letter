@@ -123,7 +123,7 @@ function isBlockEmpty(
 }
 
 export function hasReachedBoardEdge(
-  location: "left" | "right" | "bottom",
+  location: "left" | "right",
   options: {
     board: Awaited<ReturnType<typeof loader>>["tetrisBoard"];
     block: Awaited<ReturnType<typeof loader>>["streamOfBlocks"][0];
@@ -136,10 +136,7 @@ export function hasReachedBoardEdge(
   if (location === "left") {
     return hasReachedLeftEdge(options.position);
   }
-  if (location === "right") {
-    return hasReachedRightEdge(options);
-  }
-  return hasReachedBottomEdge(options);
+  return hasReachedRightEdge(options);
 }
 
 function hasReachedRightEdge(options: {
@@ -153,24 +150,20 @@ function hasReachedRightEdge(options: {
   const { board, block, position } = options;
   const blockWidth = block[0].length;
   const blockRightEdge = position.x + blockWidth;
-  const boardWidth = board[0].length;
+  // The top, left and bottom boundary of the board is filled with active cells
+  // and the top boundary is filled with $BLOCK_HEIGHT non-active cells
+  // to simplify the game logic.
+  // These boundaries are not rendered. Thats why we use board[0].length - 1 here.
+  const boardWidth = board[0].length - 1;
   return blockRightEdge >= boardWidth;
 }
 
 function hasReachedLeftEdge(position: { x: number; y: number }) {
-  return position.x <= 0;
-}
-
-function hasReachedBottomEdge(options: {
-  board: Awaited<ReturnType<typeof loader>>["tetrisBoard"];
-  block: Awaited<ReturnType<typeof loader>>["streamOfBlocks"][0];
-  position: {
-    x: number;
-    y: number;
-  };
-}) {
-  const { board, block, position } = options;
-  return position.y + block.length >= board.length;
+  // The top, left and bottom boundary of the board is filled with active cells
+  // and the top boundary is filled with $BLOCK_HEIGHT non-active cells
+  // to simplify the game logic.
+  // These boundaries are not rendered. Thats why we use <= 1 instead of <= 0 here.
+  return position.x <= 1;
 }
 
 export function hasAdjacentBlock(
