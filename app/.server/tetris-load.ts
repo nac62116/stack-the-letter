@@ -82,6 +82,7 @@ type TetrisBoard = number[][];
 // Should be at least 4 times the line height or the game gets really hard
 const BOARD_HEIGHT = LINE_HEIGHT * 6;
 const MINIMUM_BOARD_WIDTH = 10;
+const BOARD_PADDING = 2;
 
 export function getTetrisBoard(blocks: TetrisBlock[]): TetrisBoard {
   let widestBlockWidth = 0;
@@ -95,7 +96,7 @@ export function getTetrisBoard(blocks: TetrisBlock[]): TetrisBoard {
     widestBlockWidth = MINIMUM_BOARD_WIDTH;
   }
 
-  const boardWidth = widestBlockWidth + 2;
+  const boardWidth = widestBlockWidth + BOARD_PADDING + 2; // 2 for boundaries (see below)
   const tetrisBoard: TetrisBoard = [
     ...Array.from({ length: BOARD_HEIGHT }, (_rowValue, rowIndex) =>
       // The board boundaries are filled with active cells to simplify the game logic
