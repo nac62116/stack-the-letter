@@ -57,7 +57,7 @@ function removeBlockFromBoard(options: {
         rowIndex < position.y + block.length &&
         columnIndex >= position.x &&
         columnIndex < position.x + block[0].length &&
-        block[rowIndex - position.y][columnIndex - position.x] === 1
+        block[rowIndex - position.y][columnIndex - position.x] !== 0
       ) {
         return 0;
       }
@@ -81,22 +81,29 @@ function addBlockToBoard(options: {
   let isGameOver = false;
   for (let rowIndex = board.length - 1; rowIndex >= 0; rowIndex--) {
     for (let columnIndex = 0; columnIndex < board[0].length; columnIndex++) {
-      const cell = board[rowIndex][columnIndex];
-      if (
-        // Only do something when we are in the block area
+      const currentBoardCellIsInBlockArea =
         rowIndex >= position.y &&
         rowIndex < position.y + block.length &&
         columnIndex >= position.x &&
-        columnIndex < position.x + block[0].length &&
+        columnIndex < position.x + block[0].length;
+      const currentBlockCellValue =
+        block[rowIndex - position.y] !== undefined &&
+        block[rowIndex - position.y][columnIndex - position.x] !== undefined
+          ? block[rowIndex - position.y][columnIndex - position.x]
+          : undefined;
+      if (
+        // Only do something when we are in the block area
+        currentBoardCellIsInBlockArea &&
         // Only do something when the current cell of the block is active
-        block[rowIndex - position.y][columnIndex - position.x] === 1
+        currentBlockCellValue !== 0 &&
+        currentBlockCellValue !== undefined
       ) {
         // Board cell already taken by another block set it above the block.
         // As we are building the block from bottom to top,
         // we can be sure that the cell above is empty.
         // We are checking the newBoard instead of the board
         // to ensure the logic works when we got multiple cells above each other .
-        if (newBoard[rowIndex][columnIndex] === 1) {
+        if (newBoard[rowIndex][columnIndex] !== 0) {
           // Deactivate the current block cell for following render cycles with the same block
           newBlock[rowIndex - position.y][columnIndex - position.x] = 0;
           // if we exceeded the top boundary of the rendered board with this move,
@@ -106,12 +113,12 @@ function addBlockToBoard(options: {
           if (rowIndex - 1 < block.length) {
             isGameOver = true;
           } else {
-            newBoard[rowIndex - 1][columnIndex] = 1;
+            newBoard[rowIndex - 1][columnIndex] = currentBlockCellValue;
           }
         } else {
           // Current block cell is active and the corresponding board cell is empty
           // Set the board cell to active
-          newBoard[rowIndex][columnIndex] = 1;
+          newBoard[rowIndex][columnIndex] = currentBlockCellValue;
         }
       }
     }
@@ -190,10 +197,10 @@ export function hasAdjacentBlock(
   for (let rowIndex = 0; rowIndex < blockHeight; rowIndex++) {
     for (let columnIndex = 0; columnIndex < blockWidth; columnIndex++) {
       if (
-        block[rowIndex][columnIndex] === 1 &&
+        block[rowIndex][columnIndex] !== 0 &&
         newBoard[position.y + rowIndex + yDelta][
           position.x + columnIndex + xDelta
-        ] === 1
+        ] !== 0
       ) {
         return true;
       }

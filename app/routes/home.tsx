@@ -13,6 +13,10 @@ import {
 import { invariantResponse } from "~/.server/error-helper";
 import { gridCols, gridRows } from "~/shared/dynamic-grid-map";
 import { LINE_HEIGHT, type TetrisBlock } from "~/.server/alphabet";
+import {
+  cellColors,
+  FALLBACK_CELL_COLOR,
+} from "~/shared/dynamic-cell-color-map";
 
 export function meta({
   data: {
@@ -348,7 +352,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
                   <div
                     key={`${rowIndex}-${columnIndex}`}
                     className={`${
-                      cell === 1 ? "bg-green-700" : "bg-inherit"
+                      cellColors[cell] || FALLBACK_CELL_COLOR
                     } w-4 h-4 border border-gray-600 rounded-sm`}
                   />
                 ) : null
