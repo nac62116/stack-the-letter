@@ -9,7 +9,7 @@ export type TetrisBlock = [
     number[],
     number[]
 ];
-export const LINE_HEIGHT: TetrisBlock["length"] = 5;
+export const BLOCK_HEIGHT: TetrisBlock["length"] = 5;
 export const DEFAULT_BLOCK: TetrisBlock = [
   [1, 1, 1],
   [0, 0, 1],

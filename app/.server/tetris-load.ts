@@ -1,12 +1,12 @@
 import {
   blockAlphabet,
   DEFAULT_BLOCK,
-  LINE_HEIGHT,
+  BLOCK_HEIGHT,
   type TetrisBlock,
 } from "./alphabet";
 
 export function transformTextToTetrisBlock(text: string): TetrisBlock {
-  const words = text.split(" ");
+  const words = text.toLowerCase().split(" ");
   // prettier-ignore
   let block: TetrisBlock = [
     [], 
@@ -20,25 +20,25 @@ export function transformTextToTetrisBlock(text: string): TetrisBlock {
     // seperator between words but not for the first word
     block = block.map((line, index) =>
       // Runtime check to verify below assertion to TetrisBlock type (even if it wont ever happen)
-      index < LINE_HEIGHT
+      index < BLOCK_HEIGHT
         ? line[0] !== undefined
           ? [...line, ...blockAlphabet[" "][index]]
           : [...line]
         : undefined
     ) as TetrisBlock;
     for (const letter of letters) {
-      if (letter.toLowerCase() in blockAlphabet) {
-        const typedLetter = letter.toLowerCase() as keyof typeof blockAlphabet;
+      if (letter in blockAlphabet) {
+        const typedLetter = letter as keyof typeof blockAlphabet;
         const letterAsBlock = [...blockAlphabet[typedLetter]];
         block = block.map((line, index) => {
           // Runtime check to verify below assertion to TetrisBlock type (even if it wont ever happen)
-          if (index >= LINE_HEIGHT) {
+          if (index >= BLOCK_HEIGHT) {
             return undefined;
           }
           if (line.some((letter) => letter === undefined)) {
             return [...letterAsBlock[index]];
           }
-          if (index >= LINE_HEIGHT) {
+          if (index >= BLOCK_HEIGHT) {
             console.error(
               `Block has wrong line height. Beginning a new block with current letter '${typedLetter}'. Block with wrong line height: ${[
                 ...block,
@@ -65,12 +65,12 @@ export function transformTextToTetrisBlock(text: string): TetrisBlock {
       }
     }
   }
-  if (block.length !== LINE_HEIGHT) {
+  if (block.length !== BLOCK_HEIGHT) {
     console.error("Block has wrong line height");
     return DEFAULT_BLOCK;
   }
-  if (block.some((line, index) => line[index] === undefined)) {
-    console.error("Block has undefined characters inside line");
+  if (block.some((line, index) => line.some((value) => value === undefined))) {
+    console.error("Block has undefined instead of number inside line");
     return DEFAULT_BLOCK;
   }
   return block;
@@ -79,7 +79,8 @@ export function transformTextToTetrisBlock(text: string): TetrisBlock {
 // Tetris board
 type TetrisBoard = number[][];
 // Should be at least 4 times the line height or the game gets really hard
-const BOARD_HEIGHT = LINE_HEIGHT * 6;
+// The top $BLOCK_HEIGHT rows are not rendered and used to drop in the block without seeing it
+const BOARD_HEIGHT = BLOCK_HEIGHT * 6;
 const MINIMUM_BOARD_WIDTH = 10;
 const BOARD_PADDING = 2;
 
@@ -95,19 +96,10 @@ export function getTetrisBoard(blocks: TetrisBlock[]): TetrisBoard {
     widestBlockWidth = MINIMUM_BOARD_WIDTH;
   }
 
-  const boardWidth = widestBlockWidth + BOARD_PADDING + 2; // 2 for boundaries (see below)
+  const boardWidth = widestBlockWidth + BOARD_PADDING;
   const tetrisBoard: TetrisBoard = [
-    ...Array.from({ length: BOARD_HEIGHT }, (_rowValue, rowIndex) =>
-      // The board boundaries are filled with active cells to simplify the game logic
-      // at the moment where a block reaches these boundaries.
-      // These boundaries are not rendered (see routes/home.tsx).
-      Array.from({ length: boardWidth }, (_cellValue, columnIndex) =>
-        rowIndex === BOARD_HEIGHT - 1 ||
-        columnIndex === 0 ||
-        columnIndex === boardWidth - 1
-          ? 1
-          : 0
-      )
+    ...Array.from({ length: BOARD_HEIGHT }, () =>
+      Array.from({ length: boardWidth }, () => 0)
     ),
   ];
 

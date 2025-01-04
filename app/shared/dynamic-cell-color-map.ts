@@ -2,10 +2,11 @@
 // we need to explicitly map cell values
 // to the corresponding tailwind color classes.
 
-export const FALLBACK_CELL_COLOR = "bg-ember-500";
+export const FALLBACK_CELL_COLOR = "bg-ember-500"; // >= $cellColors.length
 
 export const cellColors = [
-  "bg-inherit", // 0
+  "bg-inherit", // 0 <- inactive cell color
+  // Below cells are all active
   "bg-red-500", // 1
   "bg-yellow-500", // 2
   "bg-green-500", // 3
