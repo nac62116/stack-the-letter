@@ -7,12 +7,26 @@ import {
 
 export function transformTextToTetrisBlock(text: string): TetrisBlock {
   const words = text.toLowerCase().split(" ");
-  // prettier-ignore
   let block: TetrisBlock = [
-    [], 
-    [], 
-    [], 
-    [], 
+    [],
+    [],
+    [],
+    [],
+    [],
+    [],
+    [],
+    [],
+    [],
+    [],
+    [],
+    [],
+    [],
+    [],
+    [],
+    [],
+    [],
+    [],
+    [],
     [],
   ];
   for (const word of words) {
