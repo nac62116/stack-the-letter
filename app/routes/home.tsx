@@ -1,7 +1,7 @@
 import type { Route } from "./+types/home";
 import {
   getTetrisBoard,
-  transformTextToTetrisBlock,
+  transformWordToTetrisBlock,
 } from "~/.server/tetris-load";
 import React from "react";
 import type { ArrayElement } from "~/shared/type-helper";
@@ -28,15 +28,21 @@ export function meta({
 export async function loader({}: Route.LoaderArgs) {
   const author = "Colin";
   const story = {
-    headline: "A?",
-    message: "?",
-    regards: "?",
+    headline: "ABC DEF GHI JKL MNO PQR STU VWX YZ",
+    message: "Ä Ö Ü ß ? ! , . - ; :",
+    regards: "012 345 6789",
   } as const;
 
   const streamOfBlocks = [
-    transformTextToTetrisBlock(story.headline),
-    ...story.message.split(" ").map((word) => transformTextToTetrisBlock(word)),
-    transformTextToTetrisBlock(story.regards),
+    ...story.headline
+      .split(" ")
+      .map((word) => transformWordToTetrisBlock(word.toLowerCase())),
+    ...story.message
+      .split(" ")
+      .map((word) => transformWordToTetrisBlock(word.toLowerCase())),
+    ...story.regards
+      .split(" ")
+      .map((word) => transformWordToTetrisBlock(word.toLowerCase())),
   ];
 
   const tetrisBoard = getTetrisBoard(streamOfBlocks);
@@ -297,7 +303,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
           <>
             <h1>Cliff hanger</h1>
             <p>Your blocks are stacked to the top.</p>
-            <p>But your story wasn't finished yed.</p>
+            <p>But your story wasn't finished yet.</p>
             <p>Press Enter to try again.</p>
           </>
         ) : (
@@ -308,7 +314,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
               gridRows[board.length - initialBlock.length - 1]
             } ${
               gridCols[board[0].length - 1]
-            } place-items-center gap-[2px] border border-gray-600`}
+            } grid-cols-180 place-items-center gap-[2px] border border-gray-600`}
           >
             {board.map((row, rowIndex) =>
               row.map((cell, columnIndex) =>
