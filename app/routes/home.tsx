@@ -28,9 +28,9 @@ export function meta({
 export async function loader({}: Route.LoaderArgs) {
   const author = "Colin";
   const story = {
-    headline: "A",
-    message: "Story for test test test test test",
-    regards: "you",
+    headline: "A?",
+    message: "?",
+    regards: "?",
   } as const;
 
   const streamOfBlocks = [
@@ -106,7 +106,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
     blockIndexRef.current = blockIndex;
     _setBlockIndex(blockIndex);
   };
-  const initialPosition = { x: 0, y: 0 };
+  const initialPosition = { x: 1, y: 0 };
   const [position, _setPosition] = React.useState(initialPosition);
   const positionRef = React.useRef(position);
   const setPosition = (position: { x: number; y: number }) => {
@@ -129,7 +129,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
   };
 
   // States for user movement
-  type Movement = "left" | "right" | "none";
+  type Movement = "left" | "right" | "down" | "none";
   const [movement, _setMovement] = React.useState<Movement>("none");
   const movementRef = React.useRef(movement);
   const setMovement = (movement: Movement) => {
@@ -163,6 +163,9 @@ export default function Home({ loaderData }: Route.ComponentProps) {
       if (event.key === "ArrowRight") {
         setMovement("right");
       }
+      if (event.key === "ArrowDown") {
+        setMovement("down");
+      }
     };
     document.addEventListener("keydown", keydown);
     return () => {
@@ -193,19 +196,23 @@ export default function Home({ loaderData }: Route.ComponentProps) {
         gameState: undefined,
       };
       const currentMovement = movementRef.current;
-      const isTimeToMoveDown = timestamp - lastDownMoveRef.current >= 200;
+      const speed = currentMovement === "down" ? 50 : 200;
+      const isTimeToMoveDown = timestamp - lastDownMoveRef.current >= speed;
 
       // Moving current block to the left at any frame in the render cycle
       if (currentMovement === "left") {
+        setMovement("none");
         newBoardState = moveBlock("left", currentBoardState);
       }
       // Moving current block to the right at any frame in the render cycle
       if (currentMovement === "right") {
+        setMovement("none");
         newBoardState = moveBlock("right", currentBoardState);
       }
       // Moving current block down with the frequency defined in isTimeToMoveDown variable
       if (isTimeToMoveDown) {
         setLastDownMove(timestamp);
+        setMovement("none");
         newBoardState = moveBlock("down", currentBoardState);
       }
       // Checking if any movement did happen in this frame of the render cycle
@@ -215,9 +222,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
         newBoardState.position !== undefined &&
         newBoardState.gameState !== undefined
       ) {
-        // There was movement so lets first reset it to "none"
-        setMovement("none");
-        // Then update the tetris board state to trigger a rerender
+        // Update the tetris board state to trigger a rerender
         setBoard(newBoardState.board);
         /** Now check how game state has changed and accordingly update following states if needed:
          * - block
@@ -301,7 +306,9 @@ export default function Home({ loaderData }: Route.ComponentProps) {
             // and used to drop in the block from above.
             className={`grid ${
               gridRows[board.length - initialBlock.length - 1]
-            } ${gridCols[board[0].length - 1]} place-items-center gap-1`}
+            } ${
+              gridCols[board[0].length - 1]
+            } place-items-center gap-[2px] border border-gray-600`}
           >
             {board.map((row, rowIndex) =>
               row.map((cell, columnIndex) =>
@@ -312,7 +319,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
                     key={`${rowIndex}-${columnIndex}`}
                     className={`${
                       cellColors[cell] || FALLBACK_CELL_COLOR
-                    } w-4 h-4 border border-gray-600 rounded-sm`}
+                    } w-1 h-1 rounded-sm`}
                   />
                 ) : null
               )
