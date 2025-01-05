@@ -28,7 +28,8 @@ export function meta({
 export async function loader({}: Route.LoaderArgs) {
   const author = "Colin";
   const story = {
-    headline: "ABC DEF GHI JKL MNO PQR STU VWX YZ",
+    // Current maximum word size is ABCDEFGHIJKL with 12 characters
+    headline: "ABCDEFGHIJKL MNO PQR STU VWX YZ",
     message: "Ä Ö Ü ß ? ! , . - ; :",
     regards: "012 345 6789",
   } as const;
@@ -314,7 +315,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
                 // and used to drop in the block from above.
                 rowIndex >= initialBlock.length ? (
                   <div
-                    key={`${rowIndex}-${columnIndex}`}
+                    key={`${rowIndex}-${columnIndex}-${cell}`}
                     className={`${
                       cellColors[cell] || FALLBACK_CELL_COLOR
                     } w-1 h-1 rounded-sm`}
