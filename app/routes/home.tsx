@@ -136,12 +136,23 @@ export default function Home({ loaderData }: Route.ComponentProps) {
   };
 
   // States for user movement
-  type Movement = "left" | "right" | "down" | "none";
-  const [movement, _setMovement] = React.useState<Movement>("none");
-  const movementRef = React.useRef(movement);
-  const setMovement = (movement: Movement) => {
-    movementRef.current = movement;
-    _setMovement(movement);
+  const [left, _setLeft] = React.useState(false);
+  const leftRef = React.useRef(left);
+  const setLeft = (left: boolean) => {
+    leftRef.current = left;
+    _setLeft(left);
+  };
+  const [right, _setRight] = React.useState(false);
+  const rightRef = React.useRef(right);
+  const setRight = (right: boolean) => {
+    rightRef.current = right;
+    _setRight(right);
+  };
+  const [acceleration, _setAcceleration] = React.useState(false);
+  const accelerationRef = React.useRef(acceleration);
+  const setAcceleration = (acceleration: boolean) => {
+    accelerationRef.current = acceleration;
+    _setAcceleration(acceleration);
   };
 
   // State to hide the how-to-play instructions
@@ -162,21 +173,48 @@ export default function Home({ loaderData }: Route.ComponentProps) {
         }
       }
       if (event.key === "Escape") {
-        setGameState("idle");
+        if (gameStateRef.current !== "idle") {
+          setGameState("idle");
+        }
       }
       if (event.key === "ArrowLeft") {
-        setMovement("left");
+        if (leftRef.current === false) {
+          setLeft(true);
+        }
       }
       if (event.key === "ArrowRight") {
-        setMovement("right");
+        if (rightRef.current === false) {
+          setRight(true);
+        }
       }
       if (event.key === "ArrowDown") {
-        setMovement("down");
+        if (accelerationRef.current === false) {
+          setAcceleration(true);
+        }
+      }
+    };
+    const keyup = (event: KeyboardEvent) => {
+      if (event.key === "ArrowLeft") {
+        if (leftRef.current === true) {
+          setLeft(false);
+        }
+      }
+      if (event.key === "ArrowRight") {
+        if (rightRef.current === true) {
+          setRight(false);
+        }
+      }
+      if (event.key === "ArrowDown") {
+        if (accelerationRef.current === true) {
+          setAcceleration(false);
+        }
       }
     };
     document.addEventListener("keydown", keydown);
+    document.addEventListener("keyup", keyup);
     return () => {
       document.removeEventListener("keydown", keydown);
+      document.removeEventListener("keyup", keyup);
     };
   }, []);
 
@@ -186,11 +224,14 @@ export default function Home({ loaderData }: Route.ComponentProps) {
     // Render cycle
     // -> Cycle frequency is Matching the screen refresh rate
     const step: FrameRequestCallback = (timestamp) => {
-      const currentMovement = movementRef.current;
-      const speed = currentMovement === "down" ? 50 : 200;
+      const speed = accelerationRef.current === true ? 50 : 200;
       const isTimeToMoveDown = timestamp - lastDownMoveRef.current >= speed;
       // Early return to save resources if no movement is happening
-      if (isTimeToMoveDown === false && currentMovement === "none") {
+      if (
+        isTimeToMoveDown === false &&
+        leftRef.current === false &&
+        rightRef.current === false
+      ) {
         window.requestAnimationFrame(step);
         return;
       }
@@ -202,21 +243,23 @@ export default function Home({ loaderData }: Route.ComponentProps) {
       } as const;
       let newBoardState;
 
-      // Either moving down or left or right not all at one frame
       // Moving current block down with the frequency defined in isTimeToMoveDown variable
       if (isTimeToMoveDown) {
         setLastDownMove(timestamp);
-        setMovement("none");
         newBoardState = moveBlock("down", currentBoardState);
-      } else if (currentMovement === "left" || currentMovement === "right") {
+      }
+      // Not moving when both left and right are pressed
+      if ((leftRef.current && rightRef.current) === false) {
         // Moving current block to the left at any frame in the render cycle
-        if (currentMovement === "left") {
-          setMovement("none");
-          newBoardState = moveBlock("left", currentBoardState);
-        } else {
-          // Moving current block to the right at any frame in the render cycle
-          setMovement("none");
-          newBoardState = moveBlock("right", currentBoardState);
+        if (leftRef.current) {
+          newBoardState = moveBlock("left", newBoardState || currentBoardState);
+        }
+        // Moving current block to the right at any frame in the render cycle
+        if (rightRef.current) {
+          newBoardState = moveBlock(
+            "right",
+            newBoardState || currentBoardState
+          );
         }
       }
       // Checking if any movement did happen in this frame of the render cycle
