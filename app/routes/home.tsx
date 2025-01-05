@@ -93,7 +93,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
 
   // States to manage board, current block and automatic down movement
   const initialBoard = tetrisBoard;
-  const [board, _setBoard] = React.useState(tetrisBoard);
+  const [board, _setBoard] = React.useState(initialBoard);
   const boardRef = React.useRef(board);
   const setBoard = (board: typeof tetrisBoard) => {
     boardRef.current = board;
@@ -185,49 +185,41 @@ export default function Home({ loaderData }: Route.ComponentProps) {
     // Render cycle
     // -> Cycle frequency is Matching the screen refresh rate
     const step: FrameRequestCallback = (timestamp) => {
+      const currentMovement = movementRef.current;
+      const speed = currentMovement === "down" ? 50 : 200;
+      const isTimeToMoveDown = timestamp - lastDownMoveRef.current >= speed;
+      // Early return to save resources if no movement is happening
+      if (isTimeToMoveDown === false && currentMovement === "none") {
+        window.requestAnimationFrame(step);
+        return;
+      }
       const currentBoardState = {
         board: boardRef.current,
         block: blockRef.current,
         position: positionRef.current,
         gameState: gameStateRef.current,
       } as const;
-      let newBoardState:
-        | typeof currentBoardState
-        | {
-            [key in keyof typeof currentBoardState]: undefined;
-          } = {
-        board: undefined,
-        block: undefined,
-        position: undefined,
-        gameState: undefined,
-      };
-      const currentMovement = movementRef.current;
-      const speed = currentMovement === "down" ? 50 : 200;
-      const isTimeToMoveDown = timestamp - lastDownMoveRef.current >= speed;
+      let newBoardState;
 
-      // Moving current block to the left at any frame in the render cycle
-      if (currentMovement === "left") {
-        setMovement("none");
-        newBoardState = moveBlock("left", currentBoardState);
-      }
-      // Moving current block to the right at any frame in the render cycle
-      if (currentMovement === "right") {
-        setMovement("none");
-        newBoardState = moveBlock("right", currentBoardState);
-      }
+      // Either moving down or left or right not all at one frame
       // Moving current block down with the frequency defined in isTimeToMoveDown variable
       if (isTimeToMoveDown) {
         setLastDownMove(timestamp);
         setMovement("none");
         newBoardState = moveBlock("down", currentBoardState);
+      } else if (currentMovement === "left" || currentMovement === "right") {
+        // Moving current block to the left at any frame in the render cycle
+        if (currentMovement === "left") {
+          setMovement("none");
+          newBoardState = moveBlock("left", currentBoardState);
+        } else {
+          // Moving current block to the right at any frame in the render cycle
+          setMovement("none");
+          newBoardState = moveBlock("right", currentBoardState);
+        }
       }
       // Checking if any movement did happen in this frame of the render cycle
-      if (
-        newBoardState.board !== undefined &&
-        newBoardState.block !== undefined &&
-        newBoardState.position !== undefined &&
-        newBoardState.gameState !== undefined
-      ) {
+      if (newBoardState !== undefined) {
         // Update the tetris board state to trigger a rerender
         setBoard(newBoardState.board);
         /** Now check how game state has changed and accordingly update following states if needed:
@@ -237,7 +229,12 @@ export default function Home({ loaderData }: Route.ComponentProps) {
          * - gameState
          * And request the next frame if needed
          */
-        if (newBoardState.gameState === "nextBlockPlease") {
+        if (newBoardState.gameState === "running") {
+          setGameState("running");
+          setBlock(newBoardState.block);
+          setPosition(newBoardState.position);
+          window.requestAnimationFrame(step);
+        } else if (newBoardState.gameState === "nextBlockPlease") {
           // TODO: Check if there are fully active rows except the last row
           // Do that check after the block has fully been moved down
           // Which means when the gameState is "nextBlockPlease"
@@ -255,11 +252,6 @@ export default function Home({ loaderData }: Route.ComponentProps) {
           }
         } else if (newBoardState.gameState === "gameOver") {
           setGameState("gameOver");
-        } else if (newBoardState.gameState === "running") {
-          setGameState("running");
-          setBlock(newBoardState.block);
-          setPosition(newBoardState.position);
-          window.requestAnimationFrame(step);
         } else if (newBoardState.gameState === "idle") {
           setGameState("idle");
         } else {
@@ -282,7 +274,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
       {/* TODO: Styling */}
       <h1>Story Tetris</h1>
       <div>
-        {gameState === "idle" ? (
+        {gameStateRef.current === "idle" ? (
           <>
             <p>
               {author} wants to tell you a story named "{story.headline}"
@@ -290,7 +282,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
             <p>But the story is scrambled into tetris blocks...</p>
             <p>Press Enter to take a look at it.</p>
           </>
-        ) : gameState === "youWon" ? (
+        ) : gameStateRef.current === "youWon" ? (
           <>
             <h1>You got it!</h1>
             <p>Here is the full story from {author}</p>
@@ -299,7 +291,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
             <p>{story.regards}</p>
             <p>Press Enter to try again.</p>
           </>
-        ) : gameState === "gameOver" ? (
+        ) : gameStateRef.current === "gameOver" ? (
           <>
             <h1>Cliff hanger</h1>
             <p>Your blocks are stacked to the top.</p>
@@ -311,12 +303,12 @@ export default function Home({ loaderData }: Route.ComponentProps) {
             // The top $BLOCK_HEIGHT cells are not rendered
             // and used to drop in the block from above.
             className={`grid ${
-              gridRows[board.length - initialBlock.length - 1]
+              gridRows[initialBoard.length - initialBlock.length - 1]
             } ${
-              gridCols[board[0].length - 1]
+              gridCols[initialBoard[0].length - 1]
             } grid-cols-180 place-items-center gap-[2px] border border-gray-600`}
           >
-            {board.map((row, rowIndex) =>
+            {boardRef.current.map((row, rowIndex) =>
               row.map((cell, columnIndex) =>
                 // The top $BLOCK_HEIGHT cells are not rendered
                 // and used to drop in the block from above.
