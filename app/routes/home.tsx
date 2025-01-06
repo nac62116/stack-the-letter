@@ -31,6 +31,7 @@ export function meta({
 
 export async function loader({}: Route.LoaderArgs) {
   const author = "Colin";
+  const customHeading = "Love you 🥰";
   const story = {
     // TODO: Scale the max word size and the board height
     // to produce a grid that fits perfectly on a 1920x1080 screen
@@ -89,6 +90,7 @@ export async function loader({}: Route.LoaderArgs) {
 
   return {
     author,
+    customHeading,
     story,
     streamOfBlocks,
     tetrisBoard,
@@ -96,7 +98,8 @@ export async function loader({}: Route.LoaderArgs) {
 }
 
 export default function Home({ loaderData }: Route.ComponentProps) {
-  const { author, story, streamOfBlocks, tetrisBoard } = loaderData;
+  const { author, customHeading, story, streamOfBlocks, tetrisBoard } =
+    loaderData;
 
   const initialState: {
     gameStatus: GameStatus;
@@ -346,10 +349,41 @@ export default function Home({ loaderData }: Route.ComponentProps) {
   };
 
   return (
-    <div className="w-full grid justify-center text-center gap-4 p-4">
+    <div className="w-full grid grid-cols-1 justify-center text-center gap-4">
       {/* TODO: Styling */}
-      <h1>Story Tetris</h1>
-      <div>
+      <header className="w-full h-8 pb-1 grid grid-cols-3 justify-center items-center gap-4 px-4 bg-gradient-to-r from-emerald-950 from-1% via-gray-950 via-50% to-emerald-950 to-99%">
+        <h1 className="justify-self-start">Story Tetris</h1>
+        <p>{customHeading}</p>
+        <nav className="w-full flex justify-end">
+          <div className="relative flex items-center transition-all group">
+            <label
+              htmlFor="how-to-play"
+              className="group-has-[:checked]:w-72 w-fit flex gap-1 justify-between items-center cursor-pointer"
+            >
+              <div className="">How to play?</div>
+              <div className="group-has-[:checked]:-rotate-90 rotate-90">
+                &#x27BA;
+              </div>
+            </label>
+            <div className="absolute top-8 left-0 group-has-[:checked]:block hidden group-has-[:checked]:W-72">
+              <ul className="text-left">
+                <li>Press Enter to start the game.</li>
+                <li>Press Escape to stop the game.</li>
+                <li>Arrow keys to move the tetris blocks.</li>
+                <li>📜 Find out {author}s' story.</li>
+              </ul>
+              <input
+                type="checkbox"
+                id="how-to-play"
+                className="absolute w-0 h-0 opacity-0"
+                checked={showHowToPlay}
+                onChange={(event) => setShowHowToPlay(event.target.checked)}
+              />
+            </div>
+          </div>
+        </nav>
+      </header>
+      <div className="w-full grid grid-cols-1 justify-center text-center gap-4">
         {gameStatus === "idle" ? (
           <>
             <p>
@@ -396,33 +430,6 @@ export default function Home({ loaderData }: Route.ComponentProps) {
             )}
           </TetrisBoard.Board>
         )}
-      </div>
-      <div className="group">
-        <label
-          htmlFor="how-to-play"
-          className="flex justify-center items-center gap-2 cursor-pointer"
-        >
-          <div className="group-has-[:checked]:-rotate-90 rotate-90">
-            &#x27BA;
-          </div>
-          <div>How to play?</div>
-          <div className="group-has-[:checked]:-rotate-90 rotate-90">
-            &#x27BA;
-          </div>
-        </label>
-        <ul className="group-has-[:checked]:block hidden">
-          <li>Press Enter to start the game.</li>
-          <li>Press Escape to stop the game.</li>
-          <li>Use arrow keys to move the tetris blocks.</li>
-          <li>Try to find out what {author} wants to tell you.</li>
-        </ul>
-        <input
-          type="checkbox"
-          id="how-to-play"
-          className="absolute w-0 h-0 opacity-0"
-          checked={showHowToPlay}
-          onChange={(event) => setShowHowToPlay(event.target.checked)}
-        />
       </div>
     </div>
   );
