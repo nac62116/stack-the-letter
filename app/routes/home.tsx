@@ -5,14 +5,18 @@ import {
 } from "~/.server/tetris-load";
 import React from "react";
 import type { ArrayElement } from "~/shared/type-helper";
-import { type GameState, moveBlock } from "~/.client/tetris-runtime";
+import {
+  ACCELERATED_DOWN_MOVEMENT_SPEED,
+  DOWN_MOVEMENT_SPEED,
+  type GameStatus,
+  moveBlock,
+  type Position,
+  SIDE_MOVEMENT_SPEED,
+} from "~/.client/tetris-runtime";
 import { invariantResponse } from "~/.server/error-helper";
 import { gridCols, gridRows } from "~/shared/dynamic-grid-map";
 import { BLOCK_HEIGHT } from "~/.server/alphabet";
-import {
-  cellColors,
-  FALLBACK_CELL_COLOR,
-} from "~/shared/dynamic-cell-color-map";
+import { TetrisBoard } from "~/components/TetrisBoard";
 
 export function meta({
   data: {
@@ -92,121 +96,139 @@ export async function loader({}: Route.LoaderArgs) {
 export default function Home({ loaderData }: Route.ComponentProps) {
   const { author, story, streamOfBlocks, tetrisBoard } = loaderData;
 
-  // States to manage board, current block and automatic down movement
-  const initialBoard = tetrisBoard;
-  const [board, _setBoard] = React.useState(initialBoard);
-  const boardRef = React.useRef(board);
-  const setBoard = (board: typeof tetrisBoard) => {
-    boardRef.current = board;
-    _setBoard(board);
-  };
-  const initialBlock = streamOfBlocks[0];
-  const [block, _setBlock] = React.useState(initialBlock);
-  const blockRef = React.useRef(block);
-  const setBlock = (block: ArrayElement<typeof streamOfBlocks>) => {
-    blockRef.current = block;
-    _setBlock(block);
-  };
-  const [blockIndex, _setBlockIndex] = React.useState(0);
-  const blockIndexRef = React.useRef(blockIndex);
-  const setBlockIndex = (blockIndex: number) => {
-    blockIndexRef.current = blockIndex;
-    _setBlockIndex(blockIndex);
-  };
-  const initialPosition = { x: 1, y: 0 };
-  const [position, _setPosition] = React.useState(initialPosition);
-  const positionRef = React.useRef(position);
-  const setPosition = (position: { x: number; y: number }) => {
-    positionRef.current = position;
-    _setPosition(position);
-  };
-  const [lastDownMove, _setLastDownMove] = React.useState(0);
-  const lastDownMoveRef = React.useRef(lastDownMove);
-  const setLastDownMove = (lastDownMove: number) => {
-    lastDownMoveRef.current = lastDownMove;
-    _setLastDownMove(lastDownMove);
+  const initialState: {
+    gameStatus: GameStatus;
+    board: typeof tetrisBoard;
+    block: ArrayElement<typeof streamOfBlocks>;
+    blockIndex: number;
+    position: Position;
+    lastDownMove: number;
+    lastSideMove: number;
+    left: boolean;
+    right: boolean;
+    accelerate: boolean;
+    showHowToPlay: boolean;
+  } = {
+    gameStatus: "idle",
+    board: tetrisBoard,
+    block: streamOfBlocks[0],
+    blockIndex: 0,
+    position: { x: 1, y: 0 },
+    lastDownMove: 0,
+    lastSideMove: 0,
+    left: false,
+    right: false,
+    accelerate: false,
+    showHowToPlay: true,
   };
 
-  // Game state
-  const [gameState, _setGameState] = React.useState<GameState>("idle");
-  const gameStateRef = React.useRef(gameState);
-  const setGameState = (state: GameState) => {
-    gameStateRef.current = state;
-    _setGameState(state);
-  };
+  // References to the game for usage in key handlers and game loop
 
-  // States for user movement
-  const [left, _setLeft] = React.useState(false);
-  const leftRef = React.useRef(left);
-  const setLeft = (left: boolean) => {
-    leftRef.current = left;
-    _setLeft(left);
+  // Game state refs
+  const [gameStatus, _setGameStatus] = React.useState(initialState.gameStatus);
+  const gameStatusRef = React.useRef(initialState.gameStatus);
+  const setGameStatus = (newGameStatus: typeof initialState.gameStatus) => {
+    gameStatusRef.current = newGameStatus;
+    _setGameStatus(newGameStatus);
   };
-  const [right, _setRight] = React.useState(false);
-  const rightRef = React.useRef(right);
-  const setRight = (right: boolean) => {
-    rightRef.current = right;
-    _setRight(right);
+  const board = React.useRef(initialState.board);
+  const setBoard = (newBoard: typeof initialState.board) => {
+    board.current = newBoard;
   };
-  const [acceleration, _setAcceleration] = React.useState(false);
-  const accelerationRef = React.useRef(acceleration);
-  const setAcceleration = (acceleration: boolean) => {
-    accelerationRef.current = acceleration;
-    _setAcceleration(acceleration);
+  const block = React.useRef(initialState.block);
+  const setBlock = (newBlock: typeof initialState.block) => {
+    block.current = newBlock;
   };
-
-  // State to hide the how-to-play instructions
-  const [showHowToPlay, setShowHowToPlay] = React.useState(true);
+  const blockIndex = React.useRef(initialState.blockIndex);
+  const setBlockIndex = (newBlockIndex: typeof initialState.blockIndex) => {
+    blockIndex.current = newBlockIndex;
+  };
+  const position = React.useRef(initialState.position);
+  const setPosition = (newPosition: typeof initialState.position) => {
+    position.current = newPosition;
+  };
+  // Timing refs
+  const lastDownMove = React.useRef(initialState.lastDownMove);
+  const setLastDownMove = (
+    newLastDownMove: typeof initialState.lastDownMove
+  ) => {
+    lastDownMove.current = newLastDownMove;
+  };
+  const lastSideMove = React.useRef(initialState.lastSideMove);
+  const setLastSideMove = (
+    newLastSideMove: typeof initialState.lastSideMove
+  ) => {
+    lastSideMove.current = newLastSideMove;
+  };
+  // User movement refs
+  const left = React.useRef(initialState.left);
+  const setLeft = (newLeft: typeof initialState.left) => {
+    left.current = newLeft;
+  };
+  const right = React.useRef(initialState.right);
+  const setRight = (newRight: typeof initialState.right) => {
+    right.current = newRight;
+  };
+  const accelerate = React.useRef(initialState.accelerate);
+  const setAccelerate = (newAcceleration: typeof initialState.accelerate) => {
+    accelerate.current = newAcceleration;
+  };
+  // General UI refs
+  const [showHowToPlay, setShowHowToPlay] = React.useState(
+    initialState.showHowToPlay
+  );
 
   // Handler for user input
   React.useEffect(() => {
     const keydown = (event: KeyboardEvent) => {
       if (event.key === "Enter") {
-        if (gameStateRef.current !== "running") {
-          setShowHowToPlay(false);
-          setGameState("running");
-          setBoard(initialBoard);
-          setBlock(initialBlock);
-          setBlockIndex(0);
-          setPosition(initialPosition);
+        if (gameStatusRef.current !== "running") {
+          setGameStatus("running");
+          if (showHowToPlay === true) {
+            setShowHowToPlay(false);
+          }
+          setBoard(initialState.board);
+          setBlock(initialState.block);
+          setBlockIndex(initialState.blockIndex);
+          setPosition(initialState.position);
           startGame();
         }
       }
       if (event.key === "Escape") {
-        if (gameStateRef.current !== "idle") {
-          setGameState("idle");
+        if (gameStatusRef.current !== "idle") {
+          setGameStatus("idle");
         }
       }
       if (event.key === "ArrowLeft") {
-        if (leftRef.current === false) {
+        if (left.current === false) {
           setLeft(true);
         }
       }
       if (event.key === "ArrowRight") {
-        if (rightRef.current === false) {
+        if (right.current === false) {
           setRight(true);
         }
       }
       if (event.key === "ArrowDown") {
-        if (accelerationRef.current === false) {
-          setAcceleration(true);
+        if (accelerate.current === false) {
+          setAccelerate(true);
         }
       }
     };
     const keyup = (event: KeyboardEvent) => {
       if (event.key === "ArrowLeft") {
-        if (leftRef.current === true) {
+        if (left.current === true) {
           setLeft(false);
         }
       }
       if (event.key === "ArrowRight") {
-        if (rightRef.current === true) {
+        if (right.current === true) {
           setRight(false);
         }
       }
       if (event.key === "ArrowDown") {
-        if (accelerationRef.current === true) {
-          setAcceleration(false);
+        if (accelerate.current === true) {
+          setAccelerate(false);
         }
       }
     };
@@ -224,48 +246,55 @@ export default function Home({ loaderData }: Route.ComponentProps) {
     // Render cycle
     // -> Cycle frequency is Matching the screen refresh rate
     const step: FrameRequestCallback = (timestamp) => {
-      const speed = accelerationRef.current === true ? 50 : 200;
-      const isTimeToMoveDown = timestamp - lastDownMoveRef.current >= speed;
+      const speed =
+        accelerate.current === true
+          ? ACCELERATED_DOWN_MOVEMENT_SPEED
+          : DOWN_MOVEMENT_SPEED;
+      const isTimeToMoveDown = timestamp - lastDownMove.current >= speed;
+      const isTimeToMoveSidewards =
+        timestamp - lastSideMove.current >= SIDE_MOVEMENT_SPEED;
       // Early return to save resources if no movement is happening
       if (
         isTimeToMoveDown === false &&
-        leftRef.current === false &&
-        rightRef.current === false
+        left.current === false &&
+        right.current === false
       ) {
         window.requestAnimationFrame(step);
         return;
       }
-      const currentBoardState = {
-        board: boardRef.current,
-        block: blockRef.current,
-        position: positionRef.current,
-        gameState: gameStateRef.current,
+      let newState;
+      const currentState = {
+        board: board.current,
+        block: block.current,
+        position: position.current,
+        gameStatus: gameStatusRef.current,
       } as const;
-      let newBoardState;
 
       // Moving current block down with the frequency defined in isTimeToMoveDown variable
       if (isTimeToMoveDown) {
         setLastDownMove(timestamp);
-        newBoardState = moveBlock("down", currentBoardState);
+        newState = moveBlock("down", currentState);
       }
       // Not moving when both left and right are pressed
-      if ((leftRef.current && rightRef.current) === false) {
+      if (
+        isTimeToMoveSidewards &&
+        (left.current === true && right.current === true) === false
+      ) {
         // Moving current block to the left at any frame in the render cycle
-        if (leftRef.current) {
-          newBoardState = moveBlock("left", newBoardState || currentBoardState);
+        if (left.current === true) {
+          setLastSideMove(timestamp);
+          newState = moveBlock("left", newState || currentState);
         }
         // Moving current block to the right at any frame in the render cycle
-        if (rightRef.current) {
-          newBoardState = moveBlock(
-            "right",
-            newBoardState || currentBoardState
-          );
+        if (right.current === true) {
+          setLastSideMove(timestamp);
+          newState = moveBlock("right", newState || currentState);
         }
       }
       // Checking if any movement did happen in this frame of the render cycle
-      if (newBoardState !== undefined) {
+      if (newState !== undefined) {
         // Update the tetris board state to trigger a rerender
-        setBoard(newBoardState.board);
+        setBoard(newState.board);
         /** Now check how game state has changed and accordingly update following states if needed:
          * - block
          * - blockIndex
@@ -273,33 +302,35 @@ export default function Home({ loaderData }: Route.ComponentProps) {
          * - gameState
          * And request the next frame if needed
          */
-        if (newBoardState.gameState === "running") {
-          setGameState("running");
-          setBlock(newBoardState.block);
-          setPosition(newBoardState.position);
+        if (newState.gameStatus === "running") {
+          setGameStatus("running");
+          setBlock(newState.block);
+          setPosition(newState.position);
           window.requestAnimationFrame(step);
-        } else if (newBoardState.gameState === "nextBlockPlease") {
-          // TODO: Check if there are fully active rows except the last row
-          // Do that check after the block has fully been moved down
-          // Which means when the gameState is "nextBlockPlease"
+        } else if (newState.gameStatus === "nextBlockPlease") {
+          // TODO: Multiple ideas for clearing the board
+          // 1. Check if there are fully active rows except the last row
           // -> If so, remove them and move all rows above down
-          const currentBlockIndex = blockIndexRef.current;
+          // 2. Check if there are at least $X (f.e 10) cells with the same color in one place
+          // Meaning all are neighbors of each other and share the same color
+          // -> If so, remove them and move all rows above down
+          const currentBlockIndex = blockIndex.current;
           const nextBlock = streamOfBlocks[currentBlockIndex + 1];
           if (nextBlock === undefined) {
-            setGameState("youWon");
+            setGameStatus("youWon");
           } else {
-            setGameState("running");
+            setGameStatus("running");
             setBlock(nextBlock);
             setBlockIndex(currentBlockIndex + 1);
-            setPosition(initialPosition);
+            setPosition(initialState.position);
             window.requestAnimationFrame(step);
           }
-        } else if (newBoardState.gameState === "gameOver") {
-          setGameState("gameOver");
-        } else if (newBoardState.gameState === "idle") {
-          setGameState("idle");
+        } else if (newState.gameStatus === "gameOver") {
+          setGameStatus("gameOver");
+        } else if (newState.gameStatus === "idle") {
+          setGameStatus("idle");
         } else {
-          console.error("Unknown game state", newBoardState.gameState);
+          console.error("Unknown game state", newState.gameStatus);
         }
       } else {
         // No movement in this frame of the render cycle so no need to update states
@@ -307,8 +338,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
         window.requestAnimationFrame(step);
       }
     };
-    const currentGameState = gameStateRef.current;
-    if (currentGameState === "running") {
+    if (gameStatusRef.current === "running") {
       window.requestAnimationFrame(step);
     }
   };
@@ -318,7 +348,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
       {/* TODO: Styling */}
       <h1>Story Tetris</h1>
       <div>
-        {gameStateRef.current === "idle" ? (
+        {gameStatus === "idle" ? (
           <>
             <p>
               {author} wants to tell you a story named "{story.headline}"
@@ -326,7 +356,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
             <p>But the story is scrambled into tetris blocks...</p>
             <p>Press Enter to take a look at it.</p>
           </>
-        ) : gameStateRef.current === "youWon" ? (
+        ) : gameStatus === "youWon" ? (
           <>
             <h1>You got it!</h1>
             <p>Here is the full story from {author}</p>
@@ -335,7 +365,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
             <p>{story.regards}</p>
             <p>Press Enter to try again.</p>
           </>
-        ) : gameStateRef.current === "gameOver" ? (
+        ) : gameStatus === "gameOver" ? (
           <>
             <h1>Cliff hanger</h1>
             <p>Your blocks are stacked to the top.</p>
@@ -343,30 +373,26 @@ export default function Home({ loaderData }: Route.ComponentProps) {
             <p>Press Enter to try again.</p>
           </>
         ) : (
-          <div
-            // The top $BLOCK_HEIGHT cells are not rendered
-            // and used to drop in the block from above.
-            className={`grid ${
-              gridRows[initialBoard.length - initialBlock.length - 1]
-            } ${
-              gridCols[initialBoard[0].length - 1]
-            } grid-cols-180 place-items-center gap-[2px] border border-gray-600`}
+          <TetrisBoard.Board
+            id="tetris-board"
+            boardHeight={initialState.board.length}
+            boardWidth={initialState.board[0].length}
+            blockHeight={initialState.block.length}
           >
-            {boardRef.current.map((row, rowIndex) =>
-              row.map((cell, columnIndex) =>
+            {tetrisBoard.map((row, rowIndex) =>
+              row.map((cellValue, columnIndex) =>
                 // The top $BLOCK_HEIGHT cells are not rendered
                 // and used to drop in the block from above.
-                rowIndex >= initialBlock.length ? (
-                  <div
-                    key={`${rowIndex}-${columnIndex}-${cell}`}
-                    className={`${
-                      cellColors[cell] || FALLBACK_CELL_COLOR
-                    } w-1 h-1 rounded-sm`}
+                rowIndex >= initialState.block.length ? (
+                  <TetrisBoard.Cell
+                    id={`row${rowIndex}column${columnIndex}`}
+                    key={`row${rowIndex}column${columnIndex}`}
+                    cellValue={cellValue}
                   />
                 ) : null
               )
             )}
-          </div>
+          </TetrisBoard.Board>
         )}
       </div>
       <div className="group">

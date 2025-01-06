@@ -1,15 +1,27 @@
+import { flushSync } from "react-dom";
+import { TetrisBoard } from "~/components/TetrisBoard";
 import type { loader } from "~/routes/home";
+import {
+  cellColors,
+  FALLBACK_CELL_COLOR,
+} from "~/shared/dynamic-cell-color-map";
 
 type MovementDirection = "left" | "right" | "down";
 type TetrisBoard = Awaited<ReturnType<typeof loader>>["tetrisBoard"];
 type TetrisBlock = Awaited<ReturnType<typeof loader>>["streamOfBlocks"][0];
-type Position = { x: number; y: number };
-export type GameState =
+export type Position = { x: number; y: number };
+export type GameStatus =
   | "idle"
   | "running"
   | "nextBlockPlease"
   | "youWon"
   | "gameOver";
+// Side movement is allowed every $SIDE_MOVEMENT_SPEED ms
+export const SIDE_MOVEMENT_SPEED = 40 as const;
+// Down movement is allowed every $DOWN_MOVEMENT_SPEED ms
+export const DOWN_MOVEMENT_SPEED = 200 as const;
+// Accelerated down movement is allowed every $ACCELERATED_DOWN_MOVEMENT_SPEED ms
+export const ACCELERATED_DOWN_MOVEMENT_SPEED = 40 as const;
 
 export function moveBlock(
   direction: MovementDirection,
@@ -17,12 +29,12 @@ export function moveBlock(
     board: TetrisBoard;
     block: TetrisBlock;
     position: Position;
-    gameState: GameState;
+    gameStatus: GameStatus;
   }
 ) {
-  const { board, block, position, gameState } = options;
-  if (gameState !== "running") {
-    return { board, block, position, gameState };
+  const { board, block, position, gameStatus } = options;
+  if (gameStatus !== "running") {
+    return { board, block, position, gameStatus };
   }
   let newBoard = board.map((row) => row.slice());
   // Here the explicit type gets lost due to map and slice function -> TetrisBlock is now number[][]
@@ -67,6 +79,50 @@ export function moveBlock(
     direction: MovementDirection
   ) => (direction === "right" ? columnIndex - 1 : columnIndex + 1);
 
+  if (direction === "left" || direction === "right") {
+    // When any cell of block that has a neighbor inside the block
+    // That is either inactive (0) or out of bounds (undefined)
+    // Has a neighbor on newBoard that is not inactive (0)
+    // Then the block can't move left|right
+    // -> return gameState "running", the original board, the original block and the original position
+    const canMoveSidewards = newBlock.every((row, rowIndex) =>
+      row.every((_cell, columnIndex) => {
+        const blockNeighbor =
+          newBlock[rowIndex] !== undefined
+            ? newBlock[rowIndex][
+                direction === "left" ? columnIndex - 1 : columnIndex + 1
+              ]
+            : undefined;
+        const boardNeighbor =
+          newBoard[rowIndex + position.y] !== undefined
+            ? newBoard[rowIndex + position.y][
+                direction === "left"
+                  ? columnIndex + position.x - 1
+                  : columnIndex + position.x + 1
+              ]
+            : undefined;
+        // There is a block neighbor
+        if (blockNeighbor !== undefined && blockNeighbor !== 0) {
+          return true;
+        }
+        // There is no block neighbor
+        if (boardNeighbor === 0) {
+          return true;
+        } else {
+          return false;
+        }
+      })
+    );
+    if (canMoveSidewards === false) {
+      return {
+        board,
+        block,
+        position,
+        gameStatus: castToGameStatus("running"),
+      };
+    }
+  }
+
   // Iterating over the board cells where the current block is on
   for (
     let rowIndex = startRowIndex;
@@ -90,32 +146,29 @@ export function moveBlock(
         // Drop the cell on the board if needed
         if (boardCellValue !== blockCellValue) {
           newBoard[rowIndex][columnIndex] = blockCellValue;
+          changeCellOnHTMLBoard({
+            rowIndex,
+            columnIndex,
+            newCellValue: blockCellValue,
+          });
         }
         if (direction === "left" || direction === "right") {
-          // - if your left|right neighbor is not inactive (0)
-          // - then your neighbor is either active or out of bounds
-          // - and therefore you can't move left|right
-          // -> return gameState "running", the original board, the original block and the original position
-          const neighborValue =
-            direction === "left"
-              ? newBoard[rowIndex][columnIndex - 1]
-              : newBoard[rowIndex][columnIndex + 1];
-          if (neighborValue !== 0) {
-            return {
-              board,
-              block,
-              position,
-              gameState: castToGameState("running"),
-            };
-          } else {
-            // - else you are allowed to move left|right -> do that by:
-            // -> setting the newBoard cell to your left|right to your value
-            // -> setting your corresponding newBoard cell value to 0
-            newBoard[rowIndex][
-              direction === "left" ? columnIndex - 1 : columnIndex + 1
-            ] = blockCellValue;
-            newBoard[rowIndex][columnIndex] = 0;
-          }
+          // you can move sidewards here because of early return before the for loops
+          changeCellOnHTMLBoard({
+            rowIndex,
+            columnIndex,
+            newCellValue: 0,
+          });
+          newBoard[rowIndex][columnIndex] = 0;
+          changeCellOnHTMLBoard({
+            rowIndex,
+            columnIndex:
+              direction === "left" ? columnIndex - 1 : columnIndex + 1,
+            newCellValue: blockCellValue,
+          });
+          newBoard[rowIndex][
+            direction === "left" ? columnIndex - 1 : columnIndex + 1
+          ] = blockCellValue;
         } else if (direction === "down") {
           // - if your below neighbor is not inactive (0)
           // - then your neighbor is either active or out of bounds
@@ -136,15 +189,25 @@ export function moveBlock(
                 board,
                 block,
                 position,
-                gameState: castToGameState("gameOver"),
+                gameStatus: castToGameStatus("gameOver"),
               };
             }
           } else {
             // - else you are allowed to move down -> do that by:
-            // -> setting the newBoard cell below you to your value
             // -> setting your corresponding newBoard cell value to 0
-            newBoard[rowIndex + 1][columnIndex] = blockCellValue;
+            // -> setting the newBoard cell below you to your value
+            changeCellOnHTMLBoard({
+              rowIndex,
+              columnIndex,
+              newCellValue: 0,
+            });
             newBoard[rowIndex][columnIndex] = 0;
+            changeCellOnHTMLBoard({
+              rowIndex: rowIndex + 1,
+              columnIndex,
+              newCellValue: blockCellValue,
+            });
+            newBoard[rowIndex + 1][columnIndex] = blockCellValue;
           }
         } else {
           console.error(
@@ -167,9 +230,9 @@ export function moveBlock(
           : position.x,
       y: direction === "down" ? position.y + 1 : position.y,
     },
-    gameState: isBlockEmpty
-      ? castToGameState("nextBlockPlease")
-      : castToGameState(gameState),
+    gameStatus: isBlockEmpty
+      ? castToGameStatus("nextBlockPlease")
+      : castToGameStatus(gameStatus),
   };
 }
 
@@ -185,6 +248,22 @@ function castToTetrisBlock(block: number[][], originalBlock: TetrisBlock) {
   return newBlock as TetrisBlock;
 }
 
-function castToGameState(gameState: GameState) {
-  return gameState;
+function castToGameStatus(gameStatus: GameStatus) {
+  return gameStatus;
+}
+
+function changeCellOnHTMLBoard(options: {
+  rowIndex: number;
+  columnIndex: number;
+  newCellValue: number;
+}) {
+  const { rowIndex, columnIndex, newCellValue } = options;
+  const cellElement = document.querySelector(
+    `#row${rowIndex}column${columnIndex}`
+  );
+  if (cellElement !== null) {
+    cellElement.className = `${
+      cellColors[newCellValue] || FALLBACK_CELL_COLOR
+    } w-1 h-1 rounded-sm`;
+  }
 }
