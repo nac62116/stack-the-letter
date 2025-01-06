@@ -23,7 +23,7 @@ const Board = (props: {
       // and used to drop in the block from above.
       className={`grid ${gridRows[boardHeight - blockHeight - 1]} ${
         gridCols[boardWidth - 1]
-      } grid-cols-180 place-items-center gap-[2px] border border-gray-600`}
+      } place-items-center gap-[2px] border border-gray-600`}
     >
       {childrenArray.map((child) => child)}
     </div>
