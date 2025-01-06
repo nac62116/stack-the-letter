@@ -32,6 +32,8 @@ export function meta({
 export async function loader({}: Route.LoaderArgs) {
   const author = "Colin";
   const story = {
+    // TODO: Scale the max word size and the board height
+    // to produce a grid that fits perfectly on a 1920x1080 screen
     // Current maximum word size is ABCDEFGHIJKL with 12 characters
     headline: "ABCDEFGHIJKL MNO PQR STU VWX YZ",
     message: "Ä Ö Ü ß ? ! , . - ; :",
