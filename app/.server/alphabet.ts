@@ -1,17 +1,20 @@
 // Tetris block
-// Twenty rows for each letter
+// Ten rows for each letter
+
+import type { CellColorNumber } from "~/shared/dynamic-cell-color-map";
+
 // prettier-ignore
 export type TetrisBlock = [
-    number[],
-    number[],
-    number[],
-    number[],
-    number[],
-    number[],
-    number[],
-    number[],
-    number[],
-    number[],
+    CellColorNumber[],
+    CellColorNumber[],
+    CellColorNumber[],
+    CellColorNumber[],
+    CellColorNumber[],
+    CellColorNumber[],
+    CellColorNumber[],
+    CellColorNumber[],
+    CellColorNumber[],
+    CellColorNumber[],
 ];
 export const BLOCK_HEIGHT: TetrisBlock["length"] = 10;
 

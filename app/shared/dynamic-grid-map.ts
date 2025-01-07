@@ -1,10 +1,25 @@
-// To change the grid layout dynamically,
-// we need to explicitly map row and column indices
-// to the corresponding tailwind grid classes.
+// Arrays generated via helper-scripts/generate-map-for-dynamic-tailwind-classes
 
-// Tetris board size is currently capped to 1280x720
-// This size already leads to 214 x 120 = 25680 cells
-// At this moment i don't want to make it more performance heavy
+/** Tetris board size is currently capped to 1280x720 pixel resolution.
+ * This size leads to ...
+ * ... Math.floor((1280 + $CELL_GAP) / ($CELL_WIDTH + $CELL_GAP)) ...
+ * ... * Math.floor((720 + $CELL_GAP) / ($CELL_WIDTH + $CELL_GAP)) ...
+ * ... Cells.
+ * Example:
+ * $CELL_WIDTH = 4
+ * $CELL_GAP = 2
+ * 214 * 120 = 25680 cells
+ * At this moment i don't want to make it more performance heavy.
+ * This cap is realized by ...
+ * ... the dynamic-grid-map.ts file ...
+ * ... the tailwind.config.ts file ...
+ * ... and the board size initialization in TetrisBoard.tsx.
+ */
+
+/** To change the grid layout dynamically,
+ * we need to explicitly map row and column indices
+ * to the corresponding tailwind grid classes.
+ */
 export const gridCols = [
   "grid-cols-1",
   "grid-cols-2",
@@ -222,6 +237,10 @@ export const gridCols = [
   "grid-cols-214",
 ] as const;
 
+/** To change the grid layout dynamically,
+ * we need to explicitly map row and column indices
+ * to the corresponding tailwind grid classes.
+ */
 export const gridRows = [
   "grid-rows-1",
   "grid-rows-2",

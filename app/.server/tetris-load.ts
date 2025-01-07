@@ -5,9 +5,9 @@ import {
   type TetrisBlock,
 } from "./alphabet";
 
-export function transformWordToTetrisBlock(word: string): TetrisBlock {
+export function transformTextToTetrisBlock(text: string): TetrisBlock {
   let block: TetrisBlock = [[], [], [], [], [], [], [], [], [], []];
-  const letters = word.split("");
+  const letters = text.split("");
   // seperator between words but not for the first word
   block = block.map((line, index) =>
     // Runtime check to verify below assertion to TetrisBlock type (even if it wont ever happen)

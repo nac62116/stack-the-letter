@@ -1,7 +1,7 @@
 import type { Route } from "./+types/home";
 import {
   getTetrisBoard,
-  transformWordToTetrisBlock,
+  transformTextToTetrisBlock,
 } from "~/.server/tetris-load";
 import React from "react";
 import type { ArrayElement } from "~/shared/type-helper";
@@ -13,7 +13,12 @@ import {
   type Position,
   SIDE_MOVEMENT_SPEED,
 } from "~/.client/tetris-runtime";
-import { TetrisBoard as TetrisBoardComponent } from "~/components/TetrisBoard";
+import {
+  CELL_GAP,
+  CELL_HEIGHT,
+  CELL_WIDTH,
+  TetrisBoard as TetrisBoardComponent,
+} from "~/components/TetrisBoard";
 import { useFetcher } from "react-router";
 import type { TetrisBlock } from "~/.server/alphabet";
 import { invariantResponse } from "~/.server/error-helper";
@@ -30,30 +35,46 @@ export function meta({
 }
 
 export async function loader({ request }: Route.LoaderArgs) {
+  // FEATURE: Let users produce their own story
   const author = "Colin";
-  const customHeading = "🥰 Love you 🥰";
+  const customHeading = "🥰 Love you very very very very much 🥰";
   const story = {
-    // TODO: Scale the max word size and the board height
-    // to produce a grid that fits perfectly on a 1920x1080 screen
-    // Current maximum word size is ABCDEFGHIJKL with 12 characters
-    headline: "ABCDEFGHIJKL MNO PQR STU VWX YZ",
+    headline: "ABCDEF GHIJKL MNO PQR STU VWX YZ",
     message: "Ä Ö Ü ß ? ! , . - ; :",
     regards: "012 345 6789",
   } as const;
+  // FEATURE: New setting: Split headline and regards into separate blocks to support more devices
+  // Hint user, that this setting leads to more supported smaller devices for the story
+  const splitHeadlineAndRegards = true; // Default: false
+  // FEATURE: New setting: Show supported device width dynamically on creation (async validation onChange)
+  // FEATURE: New setting: Let user choose their own color palette
 
   const streamOfBlocks = [
-    transformWordToTetrisBlock(story.headline.toLowerCase()),
+    ...(splitHeadlineAndRegards
+      ? story.headline
+          .split(" ")
+          .map((word) => transformTextToTetrisBlock(word.toLowerCase()))
+      : [transformTextToTetrisBlock(story.headline.toLowerCase())]),
     ...story.message
       .split(" ")
-      .map((word) => transformWordToTetrisBlock(word.toLowerCase())),
-    transformWordToTetrisBlock(story.regards.toLowerCase()),
+      .map((word) => transformTextToTetrisBlock(word.toLowerCase())),
+    ...(splitHeadlineAndRegards
+      ? story.regards
+          .split(" ")
+          .map((word) => transformTextToTetrisBlock(word.toLowerCase()))
+      : [transformTextToTetrisBlock(story.regards.toLowerCase())]),
   ];
 
   const url = new URL(request.url);
   const columns = url.searchParams.get("columns");
   const rows = url.searchParams.get("rows");
   let tetrisBoard;
-  if (columns !== null && rows !== null) {
+  if (
+    columns !== null &&
+    rows !== null &&
+    isFinite(Number(columns)) &&
+    isFinite(Number(rows))
+  ) {
     let widestBlock: TetrisBlock = streamOfBlocks[0];
     let widestBlockIndex = 0;
     let index = 0;
@@ -100,8 +121,12 @@ export default function Home({ loaderData }: Route.ComponentProps) {
   React.useEffect(() => {
     if (tetrisBoard === undefined) {
       // + 2 because a gap is between the cells, so every cell is 6px wide except one thats 4px
-      const columns = Math.floor((window.innerWidth + 2) / 6);
-      const rows = Math.floor((window.innerHeight + 2) / 6);
+      const columns = Math.floor(
+        (window.innerWidth + CELL_GAP) / (CELL_WIDTH + CELL_GAP)
+      );
+      const rows = Math.floor(
+        (window.innerHeight + CELL_GAP) / (CELL_HEIGHT + CELL_GAP)
+      );
       fetcher.submit(
         {
           columns,

@@ -1,3 +1,8 @@
+import {
+  CELL_BASE_CLASS_NAME,
+  CELL_HEIGHT_CLASS_NAME,
+  CELL_WIDTH_CLASS_NAME,
+} from "~/components/TetrisBoard";
 import type { loader } from "~/routes/home";
 import {
   cellColors,
@@ -262,6 +267,6 @@ function changeCellOnHTMLBoard(options: {
   if (cellElement !== null) {
     cellElement.className = `${
       cellColors[newCellValue] || FALLBACK_CELL_COLOR
-    } w-1 h-1 rounded-sm`;
+    } ${CELL_WIDTH_CLASS_NAME} ${CELL_HEIGHT_CLASS_NAME} ${CELL_BASE_CLASS_NAME}`;
   }
 }
