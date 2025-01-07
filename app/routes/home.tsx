@@ -32,11 +32,12 @@ import {
 
 export function meta({
   data: {
+    author,
     story: { headline },
   },
 }: Route.MetaArgs) {
   return [
-    { title: "Story Tetris" },
+    { title: `Story Tetris - ${author}s' Story` },
     { name: "description", content: headline },
   ];
 }
@@ -76,13 +77,13 @@ export async function loader({ request }: Route.LoaderArgs) {
   }
 
   // FEATURE: Let users produce their own story
+  // FEATURE: New setting: Let user choose their own color palette
   const author = "Colin";
   const story = {
     headline: "ABCDEF GHIJKL MNO PQR STU VWX YZ",
     message: "Ä Ö Ü ß ? ! , . - ; :",
     regards: "012 345 6789",
   } as const;
-  // FEATURE: New setting: Let user choose their own color palette
 
   let streamOfBlocks = [getDefaultBlock()];
   let tetrisBoard;
