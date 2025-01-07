@@ -614,3 +614,7 @@ export const blockAlphabet: {
 };
 
 export const DEFAULT_BLOCK = blockAlphabet["?"];
+
+export function getDefaultBlock() {
+  return DEFAULT_BLOCK;
+}

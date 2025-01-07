@@ -1,5 +1,8 @@
 // Arrays were generated via helper-scripts/generate-map-for-dynamic-tailwind-classes
 
+import { BLOCK_HEIGHT } from "~/.server/alphabet";
+import { CELL_GAP, CELL_HEIGHT } from "~/components/TetrisBoard";
+
 /** Tetris board size is currently capped to 1280x720 pixel resolution.
  * This size leads to ...
  * ... Math.floor((1280 + $CELL_GAP) / ($CELL_WIDTH + $CELL_GAP)) ...
@@ -16,7 +19,10 @@
  * ... and the board size initialization in TetrisBoard.tsx.
  */
 export const MAX_BOARD_WIDTH = 1280;
+export const MIN_BOARD_WIDTH = 320;
 export const MAX_BOARD_HEIGHT = 720;
+export const MIN_BOARD_HEIGHT =
+  3 * BLOCK_HEIGHT * (CELL_HEIGHT + CELL_GAP) - CELL_HEIGHT;
 
 /** To change the board size dynamically,
  * we need to explicitly map supported screen width and height values

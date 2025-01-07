@@ -4,6 +4,7 @@ import {
   BLOCK_HEIGHT,
   type TetrisBlock,
 } from "./alphabet";
+import { splitStringAtIndex } from "./string-helper";
 
 export function transformTextToTetrisBlock(text: string): TetrisBlock {
   let block: TetrisBlock = [[], [], [], [], [], [], [], [], [], []];
@@ -62,6 +63,62 @@ export function transformTextToTetrisBlock(text: string): TetrisBlock {
     return DEFAULT_BLOCK;
   }
   return block;
+}
+
+export function getBlocksFromTextUntilTheyFit(options: {
+  inputBlocks: TetrisBlock[];
+  text: string;
+  index: number | undefined;
+  storyInWords: string[];
+  columns: number;
+}) {
+  const { inputBlocks, text, index, storyInWords, columns } = options;
+  if (inputBlocks[0].length <= columns) {
+    return inputBlocks;
+  }
+  // If the text is the headline or regards split it on spaces
+  if (index === 1 || index === storyInWords.length - 1) {
+    const newTexts = text.split(" ");
+    const blocks: TetrisBlock[][] = [];
+    for (const newText of newTexts) {
+      const newBlocks = getBlocksFromTextUntilTheyFit({
+        inputBlocks: [transformTextToTetrisBlock(newText.toLowerCase())],
+        text: newText,
+        index: undefined,
+        storyInWords,
+        columns,
+      });
+      blocks.push(newBlocks);
+    }
+    return blocks.flat();
+  }
+  // The text is a word or a part of a word deeper in the recursion
+  // Hyphenate the word
+  // FEATURE: Hyphenate based on language and syllables
+  const hyphenatedText = splitStringAtIndex(text, Math.floor(text.length / 2));
+  const firstPart = `${hyphenatedText[0]}-`;
+  const secondPart = hyphenatedText[1];
+  const firstBlock = transformTextToTetrisBlock(firstPart.toLowerCase());
+  const secondBlock = transformTextToTetrisBlock(secondPart.toLowerCase());
+  const blocks: TetrisBlock[][] = [];
+  const newFirstBlock = getBlocksFromTextUntilTheyFit({
+    inputBlocks: [firstBlock],
+    text: firstPart,
+    index: undefined,
+    storyInWords,
+    columns,
+  });
+  const newSecondBlock = getBlocksFromTextUntilTheyFit({
+    inputBlocks: [secondBlock],
+    text: secondPart,
+    index: undefined,
+    storyInWords,
+    columns,
+  });
+  blocks.push(newFirstBlock);
+  blocks.push(newSecondBlock);
+
+  return blocks.flat();
 }
 
 // Tetris board

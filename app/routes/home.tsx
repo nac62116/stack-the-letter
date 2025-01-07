@@ -1,5 +1,6 @@
 import type { Route } from "./+types/home";
 import {
+  getBlocksFromTextUntilTheyFit,
   getTetrisBoard,
   transformTextToTetrisBlock,
 } from "~/.server/tetris-load";
@@ -20,8 +21,14 @@ import {
   TetrisBoard as TetrisBoardComponent,
 } from "~/components/TetrisBoard";
 import { useFetcher } from "react-router";
-import type { TetrisBlock } from "~/.server/alphabet";
+import { BLOCK_HEIGHT, getDefaultBlock } from "~/.server/alphabet";
 import { invariantResponse } from "~/.server/error-helper";
+import {
+  MAX_BOARD_HEIGHT,
+  MAX_BOARD_WIDTH,
+  MIN_BOARD_HEIGHT,
+  MIN_BOARD_WIDTH,
+} from "~/shared/dynamic-size-map";
 
 export function meta({
   data: {
@@ -35,6 +42,39 @@ export function meta({
 }
 
 export async function loader({ request }: Route.LoaderArgs) {
+  const url = new URL(request.url);
+  const columnsString = url.searchParams.get("columns");
+  const rowsString = url.searchParams.get("rows");
+  let rows;
+  let columns;
+  if (rowsString !== null && isFinite(Number(rowsString))) {
+    rows = Number(rowsString);
+    const maxRows =
+      (MAX_BOARD_HEIGHT + BLOCK_HEIGHT + CELL_GAP) / (CELL_HEIGHT + CELL_GAP);
+    const minRows = 3 * BLOCK_HEIGHT;
+    invariantResponse(
+      rows >= minRows,
+      `Sorry, your device or window is too small to play this game. Your screen must be at least ${MIN_BOARD_HEIGHT} pixels high.`,
+      { status: 400 }
+    );
+    if (rows > maxRows) {
+      rows = maxRows;
+    }
+  }
+  if (columnsString !== null && isFinite(Number(columnsString))) {
+    columns = Number(columnsString);
+    const maxColumns = (MAX_BOARD_WIDTH + CELL_GAP) / (CELL_WIDTH + CELL_GAP);
+    const minColumns = (MIN_BOARD_WIDTH + CELL_GAP) / (CELL_WIDTH + CELL_GAP);
+    invariantResponse(
+      columns >= minColumns,
+      `Sorry, your device or window is too small to play this game. Your screen must be at least ${MIN_BOARD_WIDTH} pixels wide.`,
+      { status: 400 }
+    );
+    if (columns > maxColumns) {
+      columns = maxColumns;
+    }
+  }
+
   // FEATURE: Let users produce their own story
   const author = "Colin";
   const story = {
@@ -42,64 +82,37 @@ export async function loader({ request }: Route.LoaderArgs) {
     message: "Ä Ö Ü ß ? ! , . - ; :",
     regards: "012 345 6789",
   } as const;
-  // FEATURE: New setting: Split headline and regards into separate blocks to support more devices
-  // Hint user, that this setting leads to more supported smaller devices for the story
-  const splitHeadlineAndRegards = true; // Default: false
-  // FEATURE: New setting: Show supported device width dynamically on creation (async validation onChange)
   // FEATURE: New setting: Let user choose their own color palette
 
-  const streamOfBlocks = [
-    ...(splitHeadlineAndRegards
-      ? story.headline
-          .split(" ")
-          .map((word) => transformTextToTetrisBlock(word.toLowerCase()))
-      : [transformTextToTetrisBlock(story.headline.toLowerCase())]),
-    ...story.message
-      .split(" ")
-      .map((word) => transformTextToTetrisBlock(word.toLowerCase())),
-    ...(splitHeadlineAndRegards
-      ? story.regards
-          .split(" ")
-          .map((word) => transformTextToTetrisBlock(word.toLowerCase()))
-      : [transformTextToTetrisBlock(story.regards.toLowerCase())]),
-  ];
-
-  const url = new URL(request.url);
-  const columns = url.searchParams.get("columns");
-  const rows = url.searchParams.get("rows");
+  let streamOfBlocks = [getDefaultBlock()];
   let tetrisBoard;
-  if (
-    columns !== null &&
-    rows !== null &&
-    isFinite(Number(columns)) &&
-    isFinite(Number(rows))
-  ) {
-    let widestBlock: TetrisBlock = streamOfBlocks[0];
-    let widestBlockIndex = 0;
-    let index = 0;
-    for (const block of streamOfBlocks) {
-      if (block[0].length > widestBlock[0].length) {
-        widestBlock = block;
-        widestBlockIndex = index;
-      }
-      index++;
-    }
-    invariantResponse(
-      widestBlock[0].length <= Number(columns),
-      `${
-        widestBlockIndex === 0
-          ? "Story headline is too long to fit on the board"
-          : widestBlockIndex === streamOfBlocks.length - 1
-          ? "Story regards are too long to fit on the board"
-          : `Word ${story.message
-              .split(" ")
-              .at(
-                widestBlockIndex + 1
-              )} in story is too long to fit on the board`
-      }`,
-      { status: 400 }
-    );
-    tetrisBoard = getTetrisBoard(Number(columns), Number(rows));
+  if (columns !== undefined && rows !== undefined) {
+    // TODO: RangeError: Maximum call stack size exceeded
+    console.log("Columns: ", columns, "Rows: ", rows);
+    const storyInWords = [
+      [story.headline],
+      story.message.split(" "),
+      [story.regards],
+    ].flat();
+
+    const cuttenStory = storyInWords.map((initialText, index) => {
+      const initialBlock = transformTextToTetrisBlock(
+        initialText.toLowerCase()
+      );
+      const columns = 0;
+      console.log("Before recursion");
+      const blocks = getBlocksFromTextUntilTheyFit({
+        inputBlocks: [initialBlock],
+        text: initialText,
+        index,
+        storyInWords,
+        columns,
+      });
+      console.log("After recursion");
+      return blocks;
+    });
+    streamOfBlocks = cuttenStory.flat();
+    tetrisBoard = getTetrisBoard(columns, rows);
   }
 
   return {
