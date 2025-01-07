@@ -4,6 +4,37 @@ import {
   FALLBACK_CELL_COLOR,
 } from "~/shared/dynamic-cell-color-map";
 import { gridCols, gridRows } from "~/shared/dynamic-grid-map";
+import {
+  height,
+  MAX_BOARD_HEIGHT,
+  MAX_BOARD_WIDTH,
+  width,
+} from "~/shared/dynamic-size-map";
+
+/** Tetris board size is currently capped to 1280x720 pixel resolution.
+ * This size leads to ...
+ * ... Math.floor((1280 + $CELL_GAP) / ($CELL_WIDTH + $CELL_GAP)) ...
+ * ... * Math.floor((720 + $CELL_GAP) / ($CELL_WIDTH + $CELL_GAP)) ...
+ * ... Cells.
+ * Example:
+ * $CELL_WIDTH = 4
+ * $CELL_GAP = 2
+ * 214 * 120 = 25680 cells
+ * At this moment i don't want to make it more performance heavy.
+ * This cap is realized by ...
+ * ... the dynamic-grid-map.ts file ...
+ * ... the tailwind.config.ts file ...
+ * ... and the board size initialization in TetrisBoard.tsx.
+ * Keep that in mind if you want to change the cell or board size.
+ */
+
+export const CELL_BASE_CLASS_NAME = "rounded-sm";
+export const CELL_WIDTH = 4;
+export const CELL_WIDTH_CLASS_NAME = "w-1";
+export const CELL_HEIGHT = 4;
+export const CELL_HEIGHT_CLASS_NAME = "h-1";
+export const CELL_GAP = 2;
+const CELL_GAP_CLASS_NAME = "gap-[2px]";
 
 const Board = (props: {
   id: string;
@@ -16,7 +47,7 @@ const Board = (props: {
   const initialContainerClassName = "absolute top-0 grid place-items-center";
   const containerClassNameRef = React.useRef<string>(initialContainerClassName);
   const containerRef = React.useRef<HTMLDivElement>(null);
-  const initialClassName = "grid place-items-center gap-[2px]";
+  const initialClassName = `grid place-items-center ${CELL_GAP_CLASS_NAME}`;
   const classNameRef = React.useRef<string>(initialClassName);
   const ref = React.useRef<HTMLDivElement>(null);
 
@@ -27,26 +58,34 @@ const Board = (props: {
       const screenHeight = Math.floor(window.innerHeight);
       const containerWidth = screenWidth;
       const containerHeight = screenHeight;
-      let boardWidth;
-      let boardHeight;
-      // + 2 because a gap is between the cells, so every cell is 6px wide except one thats 4px
-      const columns = Math.floor((screenWidth + 2) / 6);
-      const rows = Math.floor((screenHeight + 2) / 6);
+      const boardWidth =
+        screenWidth <= MAX_BOARD_WIDTH ? screenWidth : MAX_BOARD_WIDTH;
+      const boardHeight =
+        screenHeight <= MAX_BOARD_HEIGHT ? screenHeight : MAX_BOARD_HEIGHT;
+      const showBorderX = screenWidth > MAX_BOARD_WIDTH;
+      const showBorderY = screenHeight > MAX_BOARD_HEIGHT;
+      const columns = Math.floor(
+        (screenWidth + CELL_GAP) / (CELL_WIDTH + CELL_GAP)
+      );
+      const rows = Math.floor(
+        (screenHeight + CELL_GAP) / (CELL_HEIGHT + CELL_GAP)
+      );
       let gridColsClassName = gridCols[columns - 1];
       let gridRowsClassName = gridRows[rows - 1];
-      // Tetris board size is currently capped to 1280x720
-      // This size already leads to 214 x 120 = 25680 cells
-      // At this moment i don't want to make it more performance heavy
       if (gridColsClassName === undefined) {
+        // The last gridCols class is currently optimized for $MAX_BOARD_WIDTH
         gridColsClassName = gridCols[gridCols.length - 1];
-        boardWidth = 1280;
       }
       if (gridRowsClassName === undefined) {
+        // The last gridRows class is currently optimized for $MAX_BOARD_HEIGHT
         gridRowsClassName = gridRows[gridRows.length - 1];
-        boardHeight = 720;
       }
-      containerRef.current.className = `w-[${screenWidth}px] h-[${screenHeight}px] ${containerClassNameRef.current}`;
-      ref.current.className = `w-[${screenWidth}px] h-[${screenHeight}px] ${classNameRef.current} ${gridColsClassName} ${gridRowsClassName}`;
+      containerRef.current.className = `${width[containerWidth]} ${height[containerHeight]} ${containerClassNameRef.current}`;
+      ref.current.className = `${width[boardWidth]} ${height[boardHeight]} ${
+        classNameRef.current
+      } ${gridColsClassName} ${gridRowsClassName} ${
+        showBorderX ? "border-x border-x-gray-600" : "border-none"
+      } ${showBorderY ? "border-y border-y-gray-600" : "border-none"}`;
     }
   }, []);
 
@@ -61,12 +100,13 @@ const Board = (props: {
 
 const Cell = (props: { id: string; cellValue: number }) => {
   const { id, cellValue } = props;
+
   return (
     <div
       id={id}
       className={`${
         cellColors[cellValue] || FALLBACK_CELL_COLOR
-      } w-1 h-1 rounded-sm`}
+      } ${CELL_WIDTH_CLASS_NAME} ${CELL_HEIGHT_CLASS_NAME} ${CELL_BASE_CLASS_NAME}`}
     />
   );
 };
