@@ -13,10 +13,10 @@ import {
   type Position,
   SIDE_MOVEMENT_SPEED,
 } from "~/.client/tetris-runtime";
+import { TetrisBoard as TetrisBoardComponent } from "~/components/TetrisBoard";
+import { useFetcher } from "react-router";
+import type { TetrisBlock } from "~/.server/alphabet";
 import { invariantResponse } from "~/.server/error-helper";
-import { gridCols, gridRows } from "~/shared/dynamic-grid-map";
-import { BLOCK_HEIGHT } from "~/.server/alphabet";
-import { TetrisBoard } from "~/components/TetrisBoard";
 
 export function meta({
   data: {
@@ -29,9 +29,9 @@ export function meta({
   ];
 }
 
-export async function loader({}: Route.LoaderArgs) {
+export async function loader({ request }: Route.LoaderArgs) {
   const author = "Colin";
-  const customHeading = "Love you 🥰";
+  const customHeading = "🥰 Love you 🥰";
   const story = {
     // TODO: Scale the max word size and the board height
     // to produce a grid that fits perfectly on a 1920x1080 screen
@@ -42,66 +42,78 @@ export async function loader({}: Route.LoaderArgs) {
   } as const;
 
   const streamOfBlocks = [
-    ...story.headline
-      .split(" ")
-      .map((word) => transformWordToTetrisBlock(word.toLowerCase())),
+    transformWordToTetrisBlock(story.headline.toLowerCase()),
     ...story.message
       .split(" ")
       .map((word) => transformWordToTetrisBlock(word.toLowerCase())),
-    ...story.regards
-      .split(" ")
-      .map((word) => transformWordToTetrisBlock(word.toLowerCase())),
+    transformWordToTetrisBlock(story.regards.toLowerCase()),
   ];
 
-  const tetrisBoard = getTetrisBoard(streamOfBlocks);
-
-  // The rendered tetris board is smaller than the actual tetris board
-  // because we got $LINE_HEIGHT extra rows on the top to drop in the blocks
-  // which are not rendered.
-  const renderedTetrisBoardWidth = tetrisBoard[0].length;
-  const renderedTetrisBoardHeight = tetrisBoard.length - BLOCK_HEIGHT;
-  // I have to limit the tetris board width and height
-  // because of limited grid-rows and grid-cols className definitions
-  // inside shared/dynamic-grid-map.ts
-  // and the limited gridTemplateRows and gridTemplateColumns definitions
-  // inside the tailwind.config.ts
-  const tooWide = renderedTetrisBoardWidth > Object.keys(gridCols).length;
-  const tooHigh = renderedTetrisBoardHeight > Object.keys(gridRows).length;
-  if (tooWide) {
-    console.error(
-      "Tetris board is too wide. Either use shorter headline, regards or words in your story or define more grid-cols in shared/dynamic-grid-map.ts and more gridTemplateColumns in tailwind.config.ts"
-    );
+  const url = new URL(request.url);
+  const columns = url.searchParams.get("columns");
+  const rows = url.searchParams.get("rows");
+  let tetrisBoard;
+  if (columns !== null && rows !== null) {
+    let widestBlock: TetrisBlock = streamOfBlocks[0];
+    let widestBlockIndex = 0;
+    let index = 0;
+    for (const block of streamOfBlocks) {
+      if (block[0].length > widestBlock[0].length) {
+        widestBlock = block;
+        widestBlockIndex = index;
+      }
+      index++;
+    }
     invariantResponse(
-      renderedTetrisBoardWidth <= Object.keys(gridCols).length,
-      "Bad request",
+      widestBlock[0].length <= Number(columns),
+      `${
+        widestBlockIndex === 0
+          ? "Story headline is too long to fit on the board"
+          : widestBlockIndex === streamOfBlocks.length - 1
+          ? "Story regards are too long to fit on the board"
+          : `Word ${story.message
+              .split(" ")
+              .at(
+                widestBlockIndex + 1
+              )} in story is too long to fit on the board`
+      }`,
       { status: 400 }
     );
-  }
-  if (tooHigh) {
-    console.error(
-      "Tetris board is too high. Either use shorter block height inside alphabet.ts or shorter board height in tetris-load.ts or define more grid-rows in shared/dynamic-grid-map.ts and more gridTemplateRows in tailwind.config.ts"
-    );
-    invariantResponse(
-      renderedTetrisBoardHeight - BLOCK_HEIGHT <= Object.keys(gridRows).length,
-      "Bad request",
-      { status: 400 }
-    );
+    tetrisBoard = getTetrisBoard(Number(columns), Number(rows));
   }
 
   return {
     author,
     customHeading,
     story,
-    streamOfBlocks,
     tetrisBoard,
+    streamOfBlocks,
   } as const;
 }
 
 export default function Home({ loaderData }: Route.ComponentProps) {
-  const { author, customHeading, story, streamOfBlocks, tetrisBoard } =
+  const { author, customHeading, story, tetrisBoard, streamOfBlocks } =
     loaderData;
 
-  const initialState: {
+  // If tetrisBoard is undefined submit a new request with the screen width and height
+  const fetcher = useFetcher<typeof loader>();
+  React.useEffect(() => {
+    if (tetrisBoard === undefined) {
+      // + 2 because a gap is between the cells, so every cell is 6px wide except one thats 4px
+      const columns = Math.floor((window.innerWidth + 2) / 6);
+      const rows = Math.floor((window.innerHeight + 2) / 6);
+      fetcher.submit(
+        {
+          columns,
+          // Adding Rows for dropping in the blocks from above (They are not rendered)
+          rows: rows + streamOfBlocks[0].length,
+        },
+        { method: "GET" }
+      );
+    }
+  }, []);
+
+  const initialSetup: {
     gameStatus: GameStatus;
     board: typeof tetrisBoard;
     block: ArrayElement<typeof streamOfBlocks>;
@@ -112,76 +124,94 @@ export default function Home({ loaderData }: Route.ComponentProps) {
     left: boolean;
     right: boolean;
     accelerate: boolean;
-    showHowToPlay: boolean;
   } = {
     gameStatus: "idle",
     board: tetrisBoard,
     block: streamOfBlocks[0],
     blockIndex: 0,
-    position: { x: 1, y: 0 },
+    position: { x: 0, y: 0 },
     lastDownMove: 0,
     lastSideMove: 0,
     left: false,
     right: false,
     accelerate: false,
-    showHowToPlay: true,
+  };
+  const setup = React.useRef(initialSetup);
+  const setSetup = (newSetup: typeof initialSetup) => {
+    setup.current = newSetup;
   };
 
   // References to the game for usage in key handlers and game loop
-
   // Game state refs
-  const [gameStatus, _setGameStatus] = React.useState(initialState.gameStatus);
-  const gameStatusRef = React.useRef(initialState.gameStatus);
-  const setGameStatus = (newGameStatus: typeof initialState.gameStatus) => {
+  const [gameStatus, _setGameStatus] = React.useState(initialSetup.gameStatus);
+  const gameStatusRef = React.useRef(initialSetup.gameStatus);
+  const setGameStatus = (newGameStatus: typeof initialSetup.gameStatus) => {
     gameStatusRef.current = newGameStatus;
     _setGameStatus(newGameStatus);
   };
-  const board = React.useRef(initialState.board);
-  const setBoard = (newBoard: typeof initialState.board) => {
+  const board = React.useRef(initialSetup.board);
+  const setBoard = (newBoard: typeof initialSetup.board) => {
     board.current = newBoard;
   };
-  const block = React.useRef(initialState.block);
-  const setBlock = (newBlock: typeof initialState.block) => {
+  if (fetcher.data !== undefined && fetcher.data.tetrisBoard !== undefined) {
+    const tetrisBoard = fetcher.data.tetrisBoard;
+    setSetup({
+      ...setup.current,
+      board: tetrisBoard,
+    });
+    setBoard(tetrisBoard);
+  }
+  const block = React.useRef(initialSetup.block);
+  const setBlock = (newBlock: typeof initialSetup.block) => {
     block.current = newBlock;
   };
-  const blockIndex = React.useRef(initialState.blockIndex);
-  const setBlockIndex = (newBlockIndex: typeof initialState.blockIndex) => {
+  const blockIndex = React.useRef(initialSetup.blockIndex);
+  const setBlockIndex = (newBlockIndex: typeof initialSetup.blockIndex) => {
     blockIndex.current = newBlockIndex;
   };
-  const position = React.useRef(initialState.position);
-  const setPosition = (newPosition: typeof initialState.position) => {
+  const position = React.useRef(initialSetup.position);
+  const setPosition = (newPosition: typeof initialSetup.position) => {
     position.current = newPosition;
   };
+  if (fetcher.data !== undefined && fetcher.data.tetrisBoard !== undefined) {
+    const position = {
+      x:
+        Math.floor(fetcher.data.tetrisBoard[0].length / 2) -
+        Math.floor(streamOfBlocks[0][0].length / 2),
+      y: 0,
+    };
+    setSetup({
+      ...setup.current,
+      position,
+    });
+    setPosition(position);
+  }
   // Timing refs
-  const lastDownMove = React.useRef(initialState.lastDownMove);
+  const lastDownMove = React.useRef(initialSetup.lastDownMove);
   const setLastDownMove = (
-    newLastDownMove: typeof initialState.lastDownMove
+    newLastDownMove: typeof initialSetup.lastDownMove
   ) => {
     lastDownMove.current = newLastDownMove;
   };
-  const lastSideMove = React.useRef(initialState.lastSideMove);
+  const lastSideMove = React.useRef(initialSetup.lastSideMove);
   const setLastSideMove = (
-    newLastSideMove: typeof initialState.lastSideMove
+    newLastSideMove: typeof initialSetup.lastSideMove
   ) => {
     lastSideMove.current = newLastSideMove;
   };
   // User movement refs
-  const left = React.useRef(initialState.left);
-  const setLeft = (newLeft: typeof initialState.left) => {
+  const left = React.useRef(initialSetup.left);
+  const setLeft = (newLeft: typeof initialSetup.left) => {
     left.current = newLeft;
   };
-  const right = React.useRef(initialState.right);
-  const setRight = (newRight: typeof initialState.right) => {
+  const right = React.useRef(initialSetup.right);
+  const setRight = (newRight: typeof initialSetup.right) => {
     right.current = newRight;
   };
-  const accelerate = React.useRef(initialState.accelerate);
-  const setAccelerate = (newAcceleration: typeof initialState.accelerate) => {
+  const accelerate = React.useRef(initialSetup.accelerate);
+  const setAccelerate = (newAcceleration: typeof initialSetup.accelerate) => {
     accelerate.current = newAcceleration;
   };
-  // General UI refs
-  const [showHowToPlay, setShowHowToPlay] = React.useState(
-    initialState.showHowToPlay
-  );
 
   // Handler for user input
   React.useEffect(() => {
@@ -189,13 +219,10 @@ export default function Home({ loaderData }: Route.ComponentProps) {
       if (event.key === "Enter") {
         if (gameStatusRef.current !== "running") {
           setGameStatus("running");
-          if (showHowToPlay === true) {
-            setShowHowToPlay(false);
-          }
-          setBoard(initialState.board);
-          setBlock(initialState.block);
-          setBlockIndex(initialState.blockIndex);
-          setPosition(initialState.position);
+          setBoard(setup.current.board);
+          setBlock(setup.current.block);
+          setBlockIndex(setup.current.blockIndex);
+          setPosition(setup.current.position);
           startGame();
         }
       }
@@ -251,6 +278,14 @@ export default function Home({ loaderData }: Route.ComponentProps) {
     // Render cycle
     // -> Cycle frequency is Matching the screen refresh rate
     const step: FrameRequestCallback = (timestamp) => {
+      // Early return if game status is not running
+      if (gameStatusRef.current !== "running") {
+        return;
+      }
+      // Early return if tetris board is not yet defined
+      if (board.current === undefined) {
+        return;
+      }
       const speed =
         accelerate.current === true
           ? ACCELERATED_DOWN_MOVEMENT_SPEED
@@ -327,7 +362,12 @@ export default function Home({ loaderData }: Route.ComponentProps) {
             setGameStatus("running");
             setBlock(nextBlock);
             setBlockIndex(currentBlockIndex + 1);
-            setPosition(initialState.position);
+            setPosition({
+              x:
+                Math.floor(newState.board[0].length / 2) -
+                Math.floor(nextBlock[0].length / 2),
+              y: 0,
+            });
             window.requestAnimationFrame(step);
           }
         } else if (newState.gameStatus === "gameOver") {
@@ -349,41 +389,10 @@ export default function Home({ loaderData }: Route.ComponentProps) {
   };
 
   return (
-    <div className="w-full grid grid-cols-1 justify-center text-center gap-4">
+    <div className="relative w-full grid grid-cols-1 justify-center text-center gap-4 select-none">
       {/* TODO: Styling */}
-      <header className="w-full h-8 pb-1 grid grid-cols-3 justify-center items-center gap-4 px-4 bg-gradient-to-r from-emerald-950 from-1% via-gray-950 via-50% to-emerald-950 to-99%">
-        <h1 className="justify-self-start">Story Tetris</h1>
-        <p>{customHeading}</p>
-        <nav className="w-full flex justify-end">
-          <div className="relative flex items-center transition-all group">
-            <label
-              htmlFor="how-to-play"
-              className="group-has-[:checked]:w-72 w-fit flex gap-1 justify-between items-center cursor-pointer"
-            >
-              <div className="">How to play?</div>
-              <div className="group-has-[:checked]:-rotate-90 rotate-90">
-                &#x27BA;
-              </div>
-            </label>
-            <div className="absolute top-8 left-0 group-has-[:checked]:block hidden group-has-[:checked]:W-72">
-              <ul className="text-left">
-                <li>Press Enter to start the game.</li>
-                <li>Press Escape to stop the game.</li>
-                <li>Arrow keys to move the tetris blocks.</li>
-                <li>📜 Find out {author}s' story.</li>
-              </ul>
-              <input
-                type="checkbox"
-                id="how-to-play"
-                className="absolute w-0 h-0 opacity-0"
-                checked={showHowToPlay}
-                onChange={(event) => setShowHowToPlay(event.target.checked)}
-              />
-            </div>
-          </div>
-        </nav>
-      </header>
-      <div className="w-full grid grid-cols-1 justify-center text-center gap-4">
+      <div id="header-placeholder" className="w-full h-8" />
+      <div className="grid grid-cols-1 justify-center text-center gap-4">
         {gameStatus === "idle" ? (
           <>
             <p>
@@ -408,19 +417,15 @@ export default function Home({ loaderData }: Route.ComponentProps) {
             <p>But your story wasn't finished yet.</p>
             <p>Press Enter to try again.</p>
           </>
-        ) : (
-          <TetrisBoard.Board
-            id="tetris-board"
-            boardHeight={initialState.board.length}
-            boardWidth={initialState.board[0].length}
-            blockHeight={initialState.block.length}
-          >
-            {tetrisBoard.map((row, rowIndex) =>
+        ) : fetcher.data !== undefined &&
+          fetcher.data.tetrisBoard !== undefined ? (
+          <TetrisBoardComponent.Board id="tetris-board">
+            {fetcher.data.tetrisBoard.map((row, rowIndex) =>
               row.map((cellValue, columnIndex) =>
                 // The top $BLOCK_HEIGHT cells are not rendered
                 // and used to drop in the block from above.
-                rowIndex >= initialState.block.length ? (
-                  <TetrisBoard.Cell
+                rowIndex >= setup.current.block.length ? (
+                  <TetrisBoardComponent.Cell
                     id={`row${rowIndex}column${columnIndex}`}
                     key={`row${rowIndex}column${columnIndex}`}
                     cellValue={cellValue}
@@ -428,9 +433,40 @@ export default function Home({ loaderData }: Route.ComponentProps) {
                 ) : null
               )
             )}
-          </TetrisBoard.Board>
-        )}
+          </TetrisBoardComponent.Board>
+        ) : null}
       </div>
+      <header className="absolute top-0 w-full h-8 pb-1 grid grid-cols-3 justify-center items-center gap-4 px-4 bg-gradient-to-r from-emerald-950 from-1% via-transparent via-50% to-emerald-950 to-99%">
+        <h1 className="justify-self-start">Story Tetris</h1>
+        <p>{customHeading}</p>
+        <nav className="w-full flex justify-end">
+          <div className="relative flex items-center transition-all group">
+            <label
+              htmlFor="how-to-play"
+              className="group-has-[:checked]:w-72 w-fit flex gap-1 justify-between items-center cursor-pointer"
+            >
+              <div className="">How to play?</div>
+              <div className="group-has-[:checked]:-rotate-90 rotate-90">
+                &#x27BA;
+              </div>
+            </label>
+            <div className="absolute top-8 left-0 group-has-[:checked]:block hidden group-has-[:checked]:W-72">
+              <ul className="text-left">
+                <li>Press Enter to start the game.</li>
+                <li>Press Escape to stop the game.</li>
+                <li>Arrow keys to move the tetris blocks.</li>
+                <li>📜 Find out {author}s' story.</li>
+              </ul>
+              <input
+                type="checkbox"
+                id="how-to-play"
+                className="absolute w-0 h-0 opacity-0"
+                defaultChecked={false}
+              />
+            </div>
+          </div>
+        </nav>
+      </header>
     </div>
   );
 }

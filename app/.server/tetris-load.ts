@@ -66,30 +66,12 @@ export function transformWordToTetrisBlock(word: string): TetrisBlock {
 
 // Tetris board
 type TetrisBoard = number[][];
-// Should be at least 4 times the line height or the game gets really hard
-// The top $BLOCK_HEIGHT rows are not rendered and used to drop in the block without seeing it
-const BOARD_HEIGHT = BLOCK_HEIGHT * 6;
-const MINIMUM_BOARD_WIDTH = 10;
-const BOARD_PADDING = 10;
 
-export function getTetrisBoard(blocks: TetrisBlock[]): TetrisBoard {
-  let widestBlockWidth = 0;
-  for (const block of blocks) {
-    const blockWidth = block[0].length;
-    if (blockWidth > widestBlockWidth) {
-      widestBlockWidth = blockWidth;
-    }
-  }
-  if (widestBlockWidth < MINIMUM_BOARD_WIDTH) {
-    widestBlockWidth = MINIMUM_BOARD_WIDTH;
-  }
-
-  const boardWidth = widestBlockWidth + BOARD_PADDING;
+export function getTetrisBoard(columns: number, rows: number): TetrisBoard {
   const tetrisBoard: TetrisBoard = [
-    ...Array.from({ length: BOARD_HEIGHT }, () =>
-      Array.from({ length: boardWidth }, () => 0)
+    ...Array.from({ length: rows }, () =>
+      Array.from({ length: columns }, () => 0)
     ),
   ];
-
   return tetrisBoard;
 }

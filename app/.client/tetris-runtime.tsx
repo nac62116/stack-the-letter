@@ -1,5 +1,3 @@
-import { flushSync } from "react-dom";
-import { TetrisBoard } from "~/components/TetrisBoard";
 import type { loader } from "~/routes/home";
 import {
   cellColors,
@@ -26,7 +24,7 @@ export const ACCELERATED_DOWN_MOVEMENT_SPEED = 40 as const;
 export function moveBlock(
   direction: MovementDirection,
   options: {
-    board: TetrisBoard;
+    board: NonNullable<TetrisBoard>;
     block: TetrisBlock;
     position: Position;
     gameStatus: GameStatus;
