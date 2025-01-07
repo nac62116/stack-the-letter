@@ -37,7 +37,6 @@ export function meta({
 export async function loader({ request }: Route.LoaderArgs) {
   // FEATURE: Let users produce their own story
   const author = "Colin";
-  const customHeading = "🥰 Love you very very very very much 🥰";
   const story = {
     headline: "ABCDEF GHIJKL MNO PQR STU VWX YZ",
     message: "Ä Ö Ü ß ? ! , . - ; :",
@@ -105,7 +104,6 @@ export async function loader({ request }: Route.LoaderArgs) {
 
   return {
     author,
-    customHeading,
     story,
     tetrisBoard,
     streamOfBlocks,
@@ -113,8 +111,7 @@ export async function loader({ request }: Route.LoaderArgs) {
 }
 
 export default function Home({ loaderData }: Route.ComponentProps) {
-  const { author, customHeading, story, tetrisBoard, streamOfBlocks } =
-    loaderData;
+  const { author, story, tetrisBoard, streamOfBlocks } = loaderData;
 
   // If tetrisBoard is undefined submit a new request with the screen width and height
   const fetcher = useFetcher<typeof loader>();
@@ -459,34 +456,33 @@ export default function Home({ loaderData }: Route.ComponentProps) {
           </TetrisBoardComponent.Board>
         ) : null}
       </div>
-      <header className="absolute top-0 w-full h-8 pb-1 grid grid-cols-3 justify-center items-center gap-4 px-4 bg-gradient-to-r from-emerald-950 from-1% via-transparent via-50% to-emerald-950 to-99%">
-        <h1 className="justify-self-start">Story Tetris</h1>
-        <p>{customHeading}</p>
+      <header className="absolute top-0 w-full h-8 pb-1 flex justify-between items-center gap-4 px-4 bg-gradient-to-r from-emerald-950 from-1% via-transparent via-50% to-emerald-950 to-99%">
+        <h1 className="text-nowrap">Story Tetris</h1>
         <nav className="w-full flex justify-end">
-          <div className="relative flex items-center transition-all group">
+          <div className="flex items-center group">
+            <div className="absolute h-screen inset-0 bg-emerald-950 bg-opacity-20 group-has-[:checked]:flex hidden justify-center items-center">
+              <section className="flex flex-col gap-2 border border-gray-600 bg-black p-4 rounded-xl">
+                <h2 className="text-2xl text-start">How to play?</h2>
+                <ul className="text-left">
+                  <li>Press Enter to start the game.</li>
+                  <li>Press Escape to stop the game.</li>
+                  <li>Arrow keys to move tetris blocks.</li>
+                  <li>📜 Find out {author}s' story.</li>
+                </ul>
+              </section>
+            </div>
             <label
               htmlFor="how-to-play"
-              className="group-has-[:checked]:w-72 w-fit flex gap-1 justify-between items-center cursor-pointer"
+              className="relative cursor-pointer group-has-[:checked]:absolute group-has-[:checked]:inset-0 group-has-[:checked]:h-screen group-has-[:checked]:text-end group-has-[:checked]:pr-4 group-has-[:checked]:pt-[2px]"
             >
-              <div className="">How to play?</div>
-              <div className="group-has-[:checked]:-rotate-90 rotate-90">
-                &#x27BA;
-              </div>
+              How to play?
             </label>
-            <div className="absolute top-8 left-0 group-has-[:checked]:block hidden group-has-[:checked]:W-72">
-              <ul className="text-left">
-                <li>Press Enter to start the game.</li>
-                <li>Press Escape to stop the game.</li>
-                <li>Arrow keys to move the tetris blocks.</li>
-                <li>📜 Find out {author}s' story.</li>
-              </ul>
-              <input
-                type="checkbox"
-                id="how-to-play"
-                className="absolute w-0 h-0 opacity-0"
-                defaultChecked={false}
-              />
-            </div>
+            <input
+              type="checkbox"
+              id="how-to-play"
+              className="absolute w-0 h-0 opacity-0"
+              defaultChecked={false}
+            />
           </div>
         </nav>
       </header>
