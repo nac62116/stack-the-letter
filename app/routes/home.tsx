@@ -181,6 +181,13 @@ export default function Home({ loaderData }: Route.ComponentProps) {
   }
   // TODO: Bug left and right movement not working and stopping game
   // since introduced below boardElement
+  // Maybe the batched updates need their arguments to be stored for later call
+  // f.e. stateUpdates.push({
+  // set: () => setBoard(newState.board),
+  // arg: newState
+  // })
+  // etc...
+
   const boardElement = React.useRef<(Element | null)[][]>(
     initialSetup.boardElement
   );
