@@ -1,7 +1,8 @@
 {
-  "name": "story-tetris",
+  "name": "tale-stack",
   "private": true,
   "type": "module",
+  "license": "MIT",
   "scripts": {
     "build": "react-router build",
     "dev": "react-router dev",

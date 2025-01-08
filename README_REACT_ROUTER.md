@@ -46,6 +46,18 @@ npm run build
 
 ### Docker Deployment
 
+#### Note: Modified docker deployment
+
+Using compose.yml and following npm commands:
+
+- npm run docker:build -> docker-compose build
+- npm run docker:start -> docker-compose up -d
+- npm run docker:stop -> docker-compose down
+
+#### Original docker deployment from React Router v7.1.1 template
+
+Original Dockerfile see https://github.com/remix-run/react-router-templates/blob/main/default/Dockerfile
+
 This template includes three Dockerfiles optimized for different package managers:
 
 - `Dockerfile` - for npm

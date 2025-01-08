@@ -1,9 +1,9 @@
-name: story-tetris
+name: tale-stack
 
 services:
-  story-tetris-service:
-    image: story-tetris-image:latest  # Use the image built in the previous step
-    container_name: story-tetris  # Name the container
+  tale-stack-service:
+    image: tale-stack-image:latest  # Use the image built in the previous step
+    container_name: tale-stack  # Name the container
     restart: unless-stopped  # Restart the container unless it was explicitly stopped
     build:
       context: .  # The build context is the current directory

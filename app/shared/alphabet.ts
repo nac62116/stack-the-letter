@@ -1,10 +1,10 @@
-// Tetris block
+// Block
 // Ten rows for each letter
 
 import type { CellColorNumber } from "~/shared/dynamic-cell-color-map";
 
 // prettier-ignore
-export type TetrisBlock = [
+export type Block = [
     CellColorNumber[],
     CellColorNumber[],
     CellColorNumber[],
@@ -16,10 +16,10 @@ export type TetrisBlock = [
     CellColorNumber[],
     CellColorNumber[],
 ];
-export const BLOCK_HEIGHT: TetrisBlock["length"] = 10;
+export const BLOCK_HEIGHT: Block["length"] = 10;
 
 export const blockAlphabet: {
-  [key: string]: TetrisBlock;
+  [key: string]: Block;
 } = {
   a: [
     [0, 0, 1, 1, 0, 0],

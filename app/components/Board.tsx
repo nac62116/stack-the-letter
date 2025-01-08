@@ -5,13 +5,18 @@ import {
 } from "~/shared/dynamic-cell-color-map";
 import { gridCols, gridRows } from "~/shared/dynamic-grid-map";
 import {
+  CELL_GAP,
+  CELL_HEIGHT,
+  CELL_WIDTH,
   height,
   MAX_BOARD_HEIGHT,
   MAX_BOARD_WIDTH,
+  MIN_BOARD_HEIGHT,
+  MIN_BOARD_WIDTH,
   width,
 } from "~/shared/dynamic-size-map";
 
-/** Tetris board size is currently capped to 1280x720 pixel resolution.
+/** Board size is currently capped to 1280x720 pixel resolution.
  * This size leads to ...
  * ... Math.floor((1280 + $CELL_GAP) / ($CELL_WIDTH + $CELL_GAP)) ...
  * ... * Math.floor((720 + $CELL_GAP) / ($CELL_WIDTH + $CELL_GAP)) ...
@@ -24,22 +29,19 @@ import {
  * This cap is realized by ...
  * ... the dynamic-grid-map.ts file ...
  * ... the tailwind.config.ts file ...
- * ... and the board size initialization in TetrisBoard.tsx.
+ * ... and the board size initialization in Board.tsx.
  * Keep that in mind if you want to change the cell or board size.
  */
 
 export const CELL_BASE_CLASS_NAME = "rounded-sm";
-export const CELL_WIDTH = 4;
 export const CELL_WIDTH_CLASS_NAME = "w-1";
-export const CELL_HEIGHT = 4;
 export const CELL_HEIGHT_CLASS_NAME = "h-1";
-export const CELL_GAP = 2;
 const CELL_GAP_CLASS_NAME = "gap-[2px]";
 
-const Board = (props: {
+export function Board(props: {
   id: string;
   children: React.ReactNode | HTMLCollection;
-}) => {
+}) {
   const { id, children } = props;
 
   const childrenArray = Array.isArray(children) ? children : [children];
@@ -56,12 +58,22 @@ const Board = (props: {
       // Set grid cols and rows based on screen width and height
       const screenWidth = Math.floor(window.innerWidth);
       const screenHeight = Math.floor(window.innerHeight);
-      const containerWidth = screenWidth;
-      const containerHeight = screenHeight;
+      const containerWidth =
+        screenWidth < MIN_BOARD_WIDTH ? MIN_BOARD_WIDTH : screenWidth;
+      const containerHeight =
+        screenHeight < MIN_BOARD_HEIGHT ? MIN_BOARD_HEIGHT : screenHeight;
       const boardWidth =
-        screenWidth <= MAX_BOARD_WIDTH ? screenWidth : MAX_BOARD_WIDTH;
+        screenWidth > MAX_BOARD_WIDTH
+          ? MAX_BOARD_WIDTH
+          : screenWidth < MIN_BOARD_WIDTH
+          ? MIN_BOARD_WIDTH
+          : screenWidth;
       const boardHeight =
-        screenHeight <= MAX_BOARD_HEIGHT ? screenHeight : MAX_BOARD_HEIGHT;
+        screenHeight > MAX_BOARD_HEIGHT
+          ? MAX_BOARD_HEIGHT
+          : screenHeight < MIN_BOARD_HEIGHT
+          ? MIN_BOARD_HEIGHT
+          : screenHeight;
       const showBorderX = screenWidth > MAX_BOARD_WIDTH;
       const showBorderY = screenHeight > MAX_BOARD_HEIGHT;
       const columns = Math.floor(
@@ -96,9 +108,9 @@ const Board = (props: {
       </div>
     </div>
   );
-};
+}
 
-const Cell = (props: { id: string; cellValue: number }) => {
+export function Cell(props: { id: string; cellValue: number }) {
   const { id, cellValue } = props;
 
   return (
@@ -109,11 +121,4 @@ const Cell = (props: { id: string; cellValue: number }) => {
       } ${CELL_WIDTH_CLASS_NAME} ${CELL_HEIGHT_CLASS_NAME} ${CELL_BASE_CLASS_NAME}`}
     />
   );
-};
-
-const TetrisBoard = {
-  Board,
-  Cell,
-};
-
-export { TetrisBoard };
+}

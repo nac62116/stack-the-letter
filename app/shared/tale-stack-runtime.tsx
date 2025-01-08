@@ -2,21 +2,16 @@ import {
   CELL_BASE_CLASS_NAME,
   CELL_HEIGHT_CLASS_NAME,
   CELL_WIDTH_CLASS_NAME,
-} from "~/components/TetrisBoard";
-import type { loader } from "~/routes/home";
-import { BLOCK_HEIGHT } from "~/shared/alphabet";
+} from "~/components/Board";
+import { BLOCK_HEIGHT, type Block } from "~/shared/alphabet";
 import {
   cellColors,
   FALLBACK_CELL_COLOR,
 } from "~/shared/dynamic-cell-color-map";
+import type { Board } from "./tale-stack-builder";
 
 type MovementDirection = "left" | "right" | "down";
-type TetrisBoard = NonNullable<
-  Awaited<ReturnType<typeof loader>>["tetrisBoard"]
->;
-type TetrisBlock = NonNullable<
-  Awaited<ReturnType<typeof loader>>["streamOfBlocks"]
->[0];
+export type BoardCellElements = (Element | null)[][];
 export type Position = { x: number; y: number };
 export type GameStatus =
   | "idle"
@@ -38,9 +33,9 @@ export const ACCELERATED_DOWN_MOVEMENT_SPEED = 30 as const;
 export function moveBlock(
   direction: MovementDirection,
   options: {
-    board: TetrisBoard;
-    boardElement: (Element | null)[][];
-    block: TetrisBlock;
+    board: Board;
+    boardCellElements: BoardCellElements;
+    block: Block;
     position: Position;
     gameStatus: GameStatus;
     cellsToUpdate: {
@@ -49,15 +44,28 @@ export function moveBlock(
     }[];
   }
 ) {
-  const { board, boardElement, block, position, gameStatus, cellsToUpdate } =
-    options;
+  const {
+    board,
+    boardCellElements,
+    block,
+    position,
+    gameStatus,
+    cellsToUpdate,
+  } = options;
   if (gameStatus !== "running") {
-    return { board, boardElement, block, position, gameStatus, cellsToUpdate };
+    return {
+      board,
+      boardCellElements,
+      block,
+      position,
+      gameStatus,
+      cellsToUpdate,
+    };
   }
   let newBoard = board.map((row) => row.slice());
-  // Here the explicit type gets lost due to map and slice function -> TetrisBlock is now number[][]
+  // Here the explicit type gets lost due to map and slice function -> Block is now number[][]
   // These types are mostly the same except:
-  // - TetrisBlock has a length of $BLOCK_HEIGHT (see .server/alphabet.ts)
+  // - Block has a length of $BLOCK_HEIGHT (see .server/alphabet.ts)
   // -> (f.e. with BLOCK_HEIGHT = 5 -> [number[], number[], number[], number[], number[]])
   // - number[][] can have any length
   let newBlock = block.map((row) => row.slice());
@@ -135,7 +143,7 @@ export function moveBlock(
     if (canMoveSidewards === false) {
       return {
         board,
-        boardElement,
+        boardCellElements,
         cellsToUpdate,
         block,
         position,
@@ -170,7 +178,7 @@ export function moveBlock(
           newCellsToUpdate = [
             ...newCellsToUpdate,
             getCellToUpdate({
-              boardElement,
+              boardCellElements,
               rowIndex,
               columnIndex,
               newCellValue: blockCellValue,
@@ -182,7 +190,7 @@ export function moveBlock(
           newCellsToUpdate = [
             ...newCellsToUpdate,
             getCellToUpdate({
-              boardElement,
+              boardCellElements,
               rowIndex,
               columnIndex,
               newCellValue: 0,
@@ -192,7 +200,7 @@ export function moveBlock(
           newCellsToUpdate = [
             ...newCellsToUpdate,
             getCellToUpdate({
-              boardElement,
+              boardCellElements,
               rowIndex,
               columnIndex:
                 direction === "left" ? columnIndex - 1 : columnIndex + 1,
@@ -220,7 +228,7 @@ export function moveBlock(
             if (rowIndex <= block.length - 1) {
               return {
                 board,
-                boardElement,
+                boardCellElements,
                 cellsToUpdate,
                 block,
                 position,
@@ -234,7 +242,7 @@ export function moveBlock(
             newCellsToUpdate = [
               ...newCellsToUpdate,
               getCellToUpdate({
-                boardElement,
+                boardCellElements,
                 rowIndex,
                 columnIndex,
                 newCellValue: 0,
@@ -244,7 +252,7 @@ export function moveBlock(
             newCellsToUpdate = [
               ...newCellsToUpdate,
               getCellToUpdate({
-                boardElement,
+                boardCellElements,
                 rowIndex: rowIndex + 1,
                 columnIndex,
                 newCellValue: blockCellValue,
@@ -260,12 +268,12 @@ export function moveBlock(
       }
     }
   }
-  const tetrisBlock = castToTetrisBlock(newBlock, block);
+  const typedBlock = castToBlock(newBlock, block);
   return {
     board: newBoard,
-    boardElement,
+    boardCellElements,
     cellsToUpdate: newCellsToUpdate,
-    block: tetrisBlock,
+    block: typedBlock,
     position: {
       x:
         direction === "left"
@@ -281,8 +289,8 @@ export function moveBlock(
   };
 }
 
-function castToTetrisBlock(block: number[][], originalBlock: TetrisBlock) {
-  // This is the runtime check to verify the assertion to TetrisBlock type
+function castToBlock(block: number[][], originalBlock: Block) {
+  // This is the runtime check to verify the assertion to Block type
   let newBlock = block;
   if (block.length !== originalBlock.length) {
     console.error(
@@ -290,7 +298,7 @@ function castToTetrisBlock(block: number[][], originalBlock: TetrisBlock) {
     );
     newBlock = originalBlock;
   }
-  return newBlock as TetrisBlock;
+  return newBlock as Block;
 }
 
 export function castToGameStatus(gameStatus: GameStatus) {
@@ -298,16 +306,16 @@ export function castToGameStatus(gameStatus: GameStatus) {
 }
 
 function getCellToUpdate(options: {
-  boardElement: (Element | null)[][];
+  boardCellElements: BoardCellElements;
   rowIndex: number;
   columnIndex: number;
   newCellValue: number;
 }) {
-  const { boardElement, rowIndex, columnIndex, newCellValue } = options;
+  const { boardCellElements, rowIndex, columnIndex, newCellValue } = options;
   if (
-    rowIndex < BLOCK_HEIGHT
-    // boardElement[rowIndex] === undefined ||
-    // boardElement[rowIndex][columnIndex] === undefined
+    rowIndex < BLOCK_HEIGHT ||
+    boardCellElements[rowIndex] === undefined ||
+    boardCellElements[rowIndex][columnIndex] === undefined
   ) {
     return {
       element: null,
@@ -315,7 +323,7 @@ function getCellToUpdate(options: {
     };
   }
   const cellToUpdate = {
-    element: boardElement[rowIndex][columnIndex],
+    element: boardCellElements[rowIndex][columnIndex],
     className: `${
       cellColors[newCellValue] || FALLBACK_CELL_COLOR
     } ${CELL_WIDTH_CLASS_NAME} ${CELL_HEIGHT_CLASS_NAME} ${CELL_BASE_CLASS_NAME}`,

@@ -1,9 +1,9 @@
-import type { Route } from "./+types/home";
-import { getTetrisBoard } from "~/.server/tetris-load";
+import type { Route } from "./+types/tale-stack";
+import { getBoard, type Board } from "~/shared/tale-stack-builder";
 import React from "react";
-import type { ArrayElement } from "~/shared/type-helper";
 import {
   ACCELERATED_DOWN_MOVEMENT_SPEED,
+  type BoardCellElements,
   castToGameStatus,
   type CellsToUpdate,
   DOWN_MOVEMENT_SPEED,
@@ -11,26 +11,23 @@ import {
   moveBlock,
   type Position,
   SIDE_MOVEMENT_SPEED,
-} from "~/.client/tetris-runtime";
+} from "~/shared/tale-stack-runtime";
 import {
   CELL_BASE_CLASS_NAME,
+  CELL_HEIGHT_CLASS_NAME,
+  CELL_WIDTH_CLASS_NAME,
+  Board as BoardComponent,
+  Cell,
+} from "~/components/Board";
+import { BLOCK_HEIGHT, DEFAULT_BLOCK, type Block } from "~/shared/alphabet";
+import {
   CELL_GAP,
   CELL_HEIGHT,
-  CELL_HEIGHT_CLASS_NAME,
   CELL_WIDTH,
-  CELL_WIDTH_CLASS_NAME,
-  TetrisBoard as TetrisBoardComponent,
-} from "~/components/TetrisBoard";
-import { useFetcher } from "react-router";
-import {
-  BLOCK_HEIGHT,
-  getDefaultBlock,
-  type TetrisBlock,
-} from "~/shared/alphabet";
-import {
-  MAX_BOARD_HEIGHT,
-  MAX_BOARD_WIDTH,
-  MIN_BOARD_WIDTH,
+  MAX_BOARD_COLUMNS,
+  MAX_BOARD_ROWS,
+  MIN_BOARD_COLUMNS,
+  MIN_BOARD_ROWS,
 } from "~/shared/dynamic-size-map";
 import { cellColors } from "~/shared/dynamic-cell-color-map";
 
@@ -41,41 +38,12 @@ export function meta({
   },
 }: Route.MetaArgs) {
   return [
-    { title: `Story Tetris - ${author}s' Story` },
+    { title: `Tale Stack - ${author}s' Story` },
     { name: "description", content: headline },
   ];
 }
 
-export async function loader({ request }: Route.LoaderArgs) {
-  const url = new URL(request.url);
-  const columnsString = url.searchParams.get("columns");
-  const rowsString = url.searchParams.get("rows");
-  let rows;
-  let columns;
-  if (rowsString !== null && isFinite(Number(rowsString))) {
-    rows = Number(rowsString);
-    const maxRows =
-      (MAX_BOARD_HEIGHT + BLOCK_HEIGHT + CELL_GAP) / (CELL_HEIGHT + CELL_GAP);
-    const minRows = 3 * BLOCK_HEIGHT;
-    if (rows > maxRows) {
-      rows = maxRows;
-    }
-    if (rows < minRows) {
-      rows = minRows;
-    }
-  }
-  if (columnsString !== null && isFinite(Number(columnsString))) {
-    columns = Number(columnsString);
-    const maxColumns = (MAX_BOARD_WIDTH + CELL_GAP) / (CELL_WIDTH + CELL_GAP);
-    const minColumns = (MIN_BOARD_WIDTH + CELL_GAP) / (CELL_WIDTH + CELL_GAP);
-    if (columns > maxColumns) {
-      columns = maxColumns;
-    }
-    if (columns < minColumns) {
-      columns = minColumns;
-    }
-  }
-
+export async function loader({}: Route.LoaderArgs) {
   // FEATURE: Let users produce their own story
   // FEATURE: New setting: Let user choose their own color palette
   const author = "Colin";
@@ -85,34 +53,21 @@ export async function loader({ request }: Route.LoaderArgs) {
     regards: "012 345 6789",
   } as const;
 
-  // TODO: Cut story into nice readable pieces (aka TetrisBlocks)
-  // f.e.
-  // headline check if its too long instead break into two lines
-  // or into single words if still too long
-  // sentence until next punctuation mark if too long consume next words to produce a block thats half a board wide by appending word after word and checking if it still fits.
-  let streamOfBlocks;
-  let tetrisBoard;
-  if (columns !== undefined && rows !== undefined) {
-    tetrisBoard = getTetrisBoard(columns, rows);
-    streamOfBlocks = [getDefaultBlock()];
-  }
-
   return {
     author,
     story,
-    tetrisBoard,
-    streamOfBlocks,
   } as const;
 }
 
 export default function Home({ loaderData }: Route.ComponentProps) {
-  const { author, story, tetrisBoard, streamOfBlocks } = loaderData;
+  const { author, story } = loaderData;
 
   const initialSetup: {
     gameStatus: GameStatus;
-    board: typeof tetrisBoard;
-    boardElement: (Element | null)[][] | undefined;
-    streamOfBlocks: typeof streamOfBlocks;
+    board: Board | undefined;
+    boardElement: HTMLDivElement | null;
+    boardCellElements: BoardCellElements | undefined;
+    streamOfBlocks: Block[] | undefined;
     blockIndex: number;
     position: Position | undefined;
     lastDownMove: number;
@@ -123,14 +78,16 @@ export default function Home({ loaderData }: Route.ComponentProps) {
     boardLoaded: boolean;
   } = {
     gameStatus: "idle",
-    // Will be set after fetching the tetris board
+    // Will be set when document is hydrated as it depends on screen size
     board: undefined,
-    // Will be set after fetching the tetris board
-    boardElement: undefined,
-    // Will be set after fetching the tetris board
+    // Will be of type HTMLDivElement when document is hydrated
+    boardElement: null,
+    // Will be set when document is hydrated as it depends on screen size
+    boardCellElements: undefined,
+    // Will be set when document is hydrated as it depends on screen size
     streamOfBlocks: undefined,
     blockIndex: 0,
-    // Will be set after fetching the tetris board
+    // Will be set when document is hydrated as it depends on screen size
     position: undefined,
     lastDownMove: 0,
     lastSideMove: 0,
@@ -139,6 +96,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
     accelerate: false,
     boardLoaded: false,
   };
+  // Keep track of the initial setup because it changes when document is hydrated
   const setup = React.useRef(initialSetup);
   const setSetup = (newSetup: typeof initialSetup) => {
     setup.current = newSetup;
@@ -156,14 +114,15 @@ export default function Home({ loaderData }: Route.ComponentProps) {
   const setBoard = (newBoard: typeof initialSetup.board) => {
     board.current = newBoard;
   };
-  const boardElement = React.useRef<(Element | null)[][]>(
-    initialSetup.boardElement
-  );
-  const setBoardElement = (newBoardElement: typeof boardElement.current) => {
-    boardElement.current = newBoardElement;
+  const boardElement = React.useRef(null);
+  const boardCellElements = React.useRef(initialSetup.boardCellElements);
+  const setBoardCellElements = (
+    newBoardCellElements: typeof initialSetup.boardCellElements
+  ) => {
+    boardCellElements.current = newBoardCellElements;
   };
-  const block = React.useRef<TetrisBlock | undefined>(undefined);
-  const setBlock = (newBlock: TetrisBlock | undefined) => {
+  const block = React.useRef<Block | undefined>(undefined);
+  const setBlock = (newBlock: Block | undefined) => {
     block.current = newBlock;
   };
   const blockIndex = React.useRef(initialSetup.blockIndex);
@@ -210,194 +169,191 @@ export default function Home({ loaderData }: Route.ComponentProps) {
     _setBoardLoaded(newBoardLoaded);
   };
 
-  // If tetrisBoard is undefined submit a new request with the screen width and height
-  const fetcher = useFetcher<typeof loader>();
-  // If fetcher data received but document is not yet rendered
-  // set all states that depend on the tetris board
-  if (
-    fetcher.data !== undefined &&
-    fetcher.data.tetrisBoard !== undefined &&
-    fetcher.data.streamOfBlocks !== undefined
-  ) {
+  // After document hydrated set the board and its dependencies
+  React.useEffect(() => {
     const statesToUpdate: (() => void)[] = [];
+    let columns = Math.floor(
+      (window.innerWidth + CELL_GAP) / (CELL_WIDTH + CELL_GAP)
+    );
+    const maxColumns = MAX_BOARD_COLUMNS;
+    const minColumns = MIN_BOARD_COLUMNS;
+    if (columns > maxColumns) {
+      columns = maxColumns;
+    }
+    if (columns < minColumns) {
+      columns = minColumns;
+    }
+    let rows = Math.floor(
+      (window.innerHeight + CELL_GAP) / (CELL_HEIGHT + CELL_GAP)
+    );
+    const maxRows = MAX_BOARD_ROWS;
+    const minRows = MIN_BOARD_ROWS;
+    if (rows > maxRows) {
+      rows = maxRows;
+    }
+    if (rows < minRows) {
+      rows = minRows;
+    }
+    const board = getBoard(columns, rows);
+
+    // TODO: Cut story into nice readable pieces (aka Blocks)
+    // f.e.
+    // headline check if its too long instead break into two lines
+    // or into single words if still too long
+    // sentence until next punctuation mark if too long consume next words to produce a block thats half a board wide by appending word after word and checking if it still fits.
+    const streamOfBlocks = [DEFAULT_BLOCK];
     const position = {
       x:
-        Math.floor(fetcher.data.tetrisBoard[0].length / 2) -
-        Math.floor(fetcher.data.streamOfBlocks[0][0].length / 2),
+        Math.floor(board[0].length / 2) -
+        Math.floor(streamOfBlocks[0][0].length / 2),
       y: 0,
     };
-    statesToUpdate.push(() => {
-      if (
-        fetcher.data !== undefined &&
-        fetcher.data.tetrisBoard !== undefined &&
-        fetcher.data.streamOfBlocks !== undefined
-      ) {
-        setSetup({
-          ...setup.current,
-          board: fetcher.data.tetrisBoard,
-          streamOfBlocks: fetcher.data.streamOfBlocks,
-          position,
-        });
-      }
-    });
-    statesToUpdate.push(() => {
-      if (
-        fetcher.data !== undefined &&
-        fetcher.data.tetrisBoard !== undefined
-      ) {
-        setBoard(fetcher.data.tetrisBoard);
-      }
-    });
-    statesToUpdate.push(() => {
-      if (
-        fetcher.data !== undefined &&
-        fetcher.data.streamOfBlocks !== undefined
-      ) {
-        setBlock(fetcher.data.streamOfBlocks[0]);
-      }
-    });
-    statesToUpdate.push(() => {
-      setPosition(position);
-    });
+    statesToUpdate.push(() => setBoard(board));
+    statesToUpdate.push(() => setBlock(streamOfBlocks[0]));
+    statesToUpdate.push(() => setPosition(position));
+    statesToUpdate.push(() => setBoardLoaded(true));
+    statesToUpdate.push(() =>
+      setSetup({
+        ...setup.current,
+        board,
+        streamOfBlocks,
+        position,
+      })
+    );
     for (const stateUpdate of statesToUpdate) {
       stateUpdate();
     }
-  }
-  // Fetching tetris board and streamOfBlocks for current screen dimensions
-  React.useEffect(() => {
-    if (tetrisBoard === undefined) {
-      const columns = Math.floor(
-        (window.innerWidth + CELL_GAP) / (CELL_WIDTH + CELL_GAP)
-      );
-      const rows = Math.floor(
-        (window.innerHeight + CELL_GAP) / (CELL_HEIGHT + CELL_GAP)
-      );
-      fetcher.submit(
-        {
-          columns,
-          // Adding Rows for dropping in the blocks from above (They are not rendered)
-          rows: rows + BLOCK_HEIGHT,
-        },
-        { method: "GET" }
-      );
-    }
   }, []);
-  // After document hydrated set the boardCellElements as reference
+
+  // After the board data and its dependencies are set -> aka setup.current has changed
+  // we reference the boardCellElements
   // to access them in a performant way inside the game loop
   React.useEffect(() => {
-    if (fetcher.data !== undefined && fetcher.data.tetrisBoard !== undefined) {
+    if (boardElement.current !== null && board.current !== undefined) {
       const statesToUpdate: (() => void)[] = [];
-      const rows = fetcher.data.tetrisBoard.length;
-      const columns = fetcher.data.tetrisBoard[0].length;
-      const cells: (Element | null)[][] = [];
+      const boardCellElements: BoardCellElements = [];
       // The first $BLOCK_HEIGHT cells are not rendered for dropping in the blocks from above
-      for (let rowIndex = BLOCK_HEIGHT; rowIndex < rows; rowIndex++) {
-        cells[rowIndex] = [];
-        for (let columnIndex = 0; columnIndex < columns; columnIndex++) {
-          cells[rowIndex][columnIndex] = document.querySelector(
+      for (
+        let rowIndex = BLOCK_HEIGHT;
+        rowIndex < board.current.length;
+        rowIndex++
+      ) {
+        boardCellElements[rowIndex] = [];
+        for (
+          let columnIndex = 0;
+          columnIndex < board.current[0].length;
+          columnIndex++
+        ) {
+          boardCellElements[rowIndex][columnIndex] = document.querySelector(
             `#row${rowIndex}column${columnIndex}`
           );
-          if (cells[rowIndex][columnIndex] === null) {
+          if (boardCellElements[rowIndex][columnIndex] === null) {
             console.error(
               `Could not find cell with id #row${rowIndex}column${columnIndex}`
             );
           }
         }
       }
-      statesToUpdate.push(() =>
-        setSetup({ ...setup.current, boardElement: cells })
-      );
       statesToUpdate.push(() => {
-        setBoardElement(cells);
+        setBoardCellElements(boardCellElements);
       });
-      statesToUpdate.push(() => setBoardLoaded(true));
+      statesToUpdate.push(() =>
+        setSetup({
+          ...setup.current,
+          boardCellElements,
+        })
+      );
       for (const stateUpdate of statesToUpdate) {
         stateUpdate();
       }
     }
-  }, [fetcher.data]);
+  }, [boardElement.current]);
 
   // Handler for user input
   React.useEffect(() => {
-    const keydown = (event: KeyboardEvent) => {
-      if (event.key === "Enter") {
-        if (gameStatusRef.current !== "running") {
-          if (
-            boardElement.current !== undefined &&
-            boardLoadedRef.current === true
-          ) {
-            const statesToUpdate: (() => void)[] = [];
-            statesToUpdate.push(() => setGameStatus("running"));
-            statesToUpdate.push(() => {
-              setBoard(setup.current.board);
-            });
-            statesToUpdate.push(() => {
-              if (setup.current.streamOfBlocks !== undefined) {
-                setBlock(setup.current.streamOfBlocks[0]);
+    // TODO: Debug this
+    console.log("boardElement.current", boardElement.current);
+    if (boardElement.current !== null) {
+      const keydown = (event: KeyboardEvent) => {
+        if (event.key === "Enter") {
+          if (gameStatusRef.current !== "running") {
+            if (boardCellElements.current !== undefined) {
+              const statesToUpdate: (() => void)[] = [];
+              statesToUpdate.push(() => setGameStatus("running"));
+              statesToUpdate.push(() => {
+                setBoard(setup.current.board);
+              });
+              statesToUpdate.push(() => {
+                if (setup.current.streamOfBlocks !== undefined) {
+                  setBlock(setup.current.streamOfBlocks[0]);
+                }
+              });
+              statesToUpdate.push(() =>
+                setBlockIndex(setup.current.blockIndex)
+              );
+              statesToUpdate.push(() => setPosition(setup.current.position));
+              for (let cell of boardCellElements.current.flat()) {
+                if (cell !== null) {
+                  cell.className = `${cellColors[0]} ${CELL_WIDTH_CLASS_NAME} ${CELL_HEIGHT_CLASS_NAME} ${CELL_BASE_CLASS_NAME}`;
+                }
               }
-            });
-            statesToUpdate.push(() => setBlockIndex(setup.current.blockIndex));
-            statesToUpdate.push(() => setPosition(setup.current.position));
-            for (let cell of boardElement.current.flat()) {
-              if (cell !== null) {
-                cell.className = `${cellColors[0]} ${CELL_WIDTH_CLASS_NAME} ${CELL_HEIGHT_CLASS_NAME} ${CELL_BASE_CLASS_NAME}`;
+              for (const stateUpdate of statesToUpdate) {
+                stateUpdate();
               }
+              startGame();
+            } else {
+              // TODO: Make this visible to the user -> Toast?
+              console.log("Board not yet loaded");
             }
-            for (const stateUpdate of statesToUpdate) {
-              stateUpdate();
-            }
-            startGame();
-          } else {
-            // TODO: Make this visible to the user -> Toast?
-            console.log("Tetris board not yet loaded");
           }
         }
-      }
-      if (event.key === "Escape") {
-        if (gameStatusRef.current !== "idle") {
-          setGameStatus("idle");
+        if (event.key === "Escape") {
+          if (gameStatusRef.current !== "idle") {
+            setGameStatus("idle");
+          }
         }
-      }
-      if (event.key === "ArrowLeft") {
-        if (left.current === false) {
-          setLeft(true);
+        if (event.key === "ArrowLeft") {
+          if (left.current === false) {
+            setLeft(true);
+          }
         }
-      }
-      if (event.key === "ArrowRight") {
-        if (right.current === false) {
-          setRight(true);
+        if (event.key === "ArrowRight") {
+          if (right.current === false) {
+            setRight(true);
+          }
         }
-      }
-      if (event.key === "ArrowDown") {
-        if (accelerate.current === false) {
-          setAccelerate(true);
+        if (event.key === "ArrowDown") {
+          if (accelerate.current === false) {
+            setAccelerate(true);
+          }
         }
-      }
-    };
-    const keyup = (event: KeyboardEvent) => {
-      if (event.key === "ArrowLeft") {
-        if (left.current === true) {
-          setLeft(false);
+      };
+      const keyup = (event: KeyboardEvent) => {
+        if (event.key === "ArrowLeft") {
+          if (left.current === true) {
+            setLeft(false);
+          }
         }
-      }
-      if (event.key === "ArrowRight") {
-        if (right.current === true) {
-          setRight(false);
+        if (event.key === "ArrowRight") {
+          if (right.current === true) {
+            setRight(false);
+          }
         }
-      }
-      if (event.key === "ArrowDown") {
-        if (accelerate.current === true) {
-          setAccelerate(false);
+        if (event.key === "ArrowDown") {
+          if (accelerate.current === true) {
+            setAccelerate(false);
+          }
         }
-      }
-    };
-    document.addEventListener("keydown", keydown);
-    document.addEventListener("keyup", keyup);
-    return () => {
-      document.removeEventListener("keydown", keydown);
-      document.removeEventListener("keyup", keyup);
-    };
-  }, []);
+      };
+      document.addEventListener("keydown", keydown);
+      document.addEventListener("keyup", keyup);
+
+      return () => {
+        document.removeEventListener("keydown", keydown);
+        document.removeEventListener("keyup", keyup);
+      };
+    }
+  }, [boardElement.current]);
 
   // Game Loop via window.requestAnimationFrame API
   // -> see https://developer.mozilla.org/en-US/docs/Web/API/Window/requestAnimationFrame)
@@ -409,10 +365,10 @@ export default function Home({ loaderData }: Route.ComponentProps) {
       if (gameStatusRef.current !== "running") {
         return;
       }
-      // Early return if tetris board and all refs that depend on it are not yet loaded
+      // Early return if board and all refs that depend on it are not yet loaded
       if (
         board.current !== undefined &&
-        boardElement.current !== undefined &&
+        boardCellElements.current !== undefined &&
         block.current !== undefined &&
         position.current !== undefined &&
         setup.current.streamOfBlocks !== undefined
@@ -435,14 +391,14 @@ export default function Home({ loaderData }: Route.ComponentProps) {
         }
         const currentState: {
           board: typeof board.current;
-          boardElement: typeof boardElement.current;
+          boardCellElements: typeof boardCellElements.current;
           cellsToUpdate: CellsToUpdate;
           block: typeof block.current;
           position: typeof position.current;
           gameStatus: GameStatus;
         } = {
           board: board.current,
-          boardElement: boardElement.current,
+          boardCellElements: boardCellElements.current,
           cellsToUpdate: [],
           block: block.current,
           position: position.current,
@@ -478,7 +434,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
         }
         // Checking if any movement did happen in this frame of the render cycle
         if (newState !== undefined) {
-          // Update the tetris board state to trigger a rerender
+          // Update the board state
           statesToUpdate.push(() => {
             setBoard(newState.board);
           });
@@ -535,6 +491,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
         for (let stateUpdate of statesToUpdate) {
           stateUpdate();
         }
+        // Batched rerendering of the board
         if (newState !== undefined) {
           for (let cell of newState.cellsToUpdate) {
             const { element, className } = cell;
@@ -547,7 +504,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
           window.requestAnimationFrame(step);
         }
       } else {
-        console.error("Started game loop without loaded tetris board");
+        console.error("Started game loop without loaded board");
       }
     };
     if (gameStatusRef.current === "running") {
@@ -566,7 +523,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
             <p>
               {author} wants to tell you a story named "{story.headline}"
             </p>
-            <p>But the story is scrambled into tetris blocks...</p>
+            <p>But the story is scrambled into blocks...</p>
             <p>Press Enter to take a look at it.</p>
           </>
         ) : gameStatus === "youWon" ? (
@@ -586,17 +543,19 @@ export default function Home({ loaderData }: Route.ComponentProps) {
             <p>Press Enter to try again.</p>
           </>
         ) : null}
-        {fetcher.data !== undefined &&
-        fetcher.data.tetrisBoard !== undefined ? (
-          <div className={`${gameStatus === "running" ? "block" : "hidden"}`}>
-            <TetrisBoardComponent.Board id="tetris-board">
-              {fetcher.data.tetrisBoard.map((row, rowIndex) =>
+        {setup.current.board !== undefined ? (
+          <div
+            ref={boardElement}
+            className={`${gameStatus === "running" ? "block" : "hidden"}`}
+          >
+            <BoardComponent id="board">
+              {setup.current.board.map((row, rowIndex) =>
                 row.map((cellValue, columnIndex) =>
                   // The top $BLOCK_HEIGHT cells are not rendered
                   // and used to drop in the block from above.
                   setup.current.streamOfBlocks !== undefined &&
                   rowIndex >= setup.current.streamOfBlocks[0].length ? (
-                    <TetrisBoardComponent.Cell
+                    <Cell
                       id={`row${rowIndex}column${columnIndex}`}
                       key={`row${rowIndex}column${columnIndex}`}
                       cellValue={cellValue}
@@ -604,14 +563,14 @@ export default function Home({ loaderData }: Route.ComponentProps) {
                   ) : null
                 )
               )}
-            </TetrisBoardComponent.Board>
+            </BoardComponent>
           </div>
         ) : null}
       </div>
       <header className="absolute top-0 w-full h-8 pb-1 flex justify-between items-center gap-4 px-4 bg-gradient-to-r from-emerald-950 from-1% via-transparent via-50% to-emerald-950 to-99%">
         <h1 className="text-nowrap">
-          Story Tetris
-          {boardLoaded === false ? " - Tetris board loading..." : ""}
+          Tale Stack
+          {boardLoaded === false ? " - Board loading..." : ""}
         </h1>
         <nav className="w-full flex justify-end">
           <div className="flex items-center group">
@@ -621,7 +580,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
                 <ul className="text-left">
                   <li>Press Enter to start the game.</li>
                   <li>Press Escape to stop the game.</li>
-                  <li>Arrow keys to move tetris blocks.</li>
+                  <li>Arrow keys to move blocks.</li>
                   <li>📜 Find out {author}s' story.</li>
                 </ul>
               </section>
