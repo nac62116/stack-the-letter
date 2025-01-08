@@ -11,8 +11,12 @@ import {
 } from "~/shared/dynamic-cell-color-map";
 
 type MovementDirection = "left" | "right" | "down";
-type TetrisBoard = Awaited<ReturnType<typeof loader>>["tetrisBoard"];
-type TetrisBlock = Awaited<ReturnType<typeof loader>>["streamOfBlocks"][0];
+type TetrisBoard = NonNullable<
+  Awaited<ReturnType<typeof loader>>["tetrisBoard"]
+>;
+type TetrisBlock = NonNullable<
+  Awaited<ReturnType<typeof loader>>["streamOfBlocks"]
+>[0];
 export type Position = { x: number; y: number };
 export type GameStatus =
   | "idle"
@@ -34,7 +38,7 @@ export const ACCELERATED_DOWN_MOVEMENT_SPEED = 30 as const;
 export function moveBlock(
   direction: MovementDirection,
   options: {
-    board: NonNullable<TetrisBoard>;
+    board: TetrisBoard;
     boardElement: (Element | null)[][];
     block: TetrisBlock;
     position: Position;
