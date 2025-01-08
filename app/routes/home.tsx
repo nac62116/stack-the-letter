@@ -13,9 +13,12 @@ import {
   SIDE_MOVEMENT_SPEED,
 } from "~/.client/tetris-runtime";
 import {
+  CELL_BASE_CLASS_NAME,
   CELL_GAP,
   CELL_HEIGHT,
+  CELL_HEIGHT_CLASS_NAME,
   CELL_WIDTH,
+  CELL_WIDTH_CLASS_NAME,
   TetrisBoard as TetrisBoardComponent,
 } from "~/components/TetrisBoard";
 import { useFetcher } from "react-router";
@@ -27,6 +30,7 @@ import {
   MIN_BOARD_HEIGHT,
   MIN_BOARD_WIDTH,
 } from "~/shared/dynamic-size-map";
+import { cellColors } from "~/shared/dynamic-cell-color-map";
 
 export function meta({
   data: {
@@ -270,10 +274,14 @@ export default function Home({ loaderData }: Route.ComponentProps) {
           statesToUpdate.push(() => {
             setBoard(setup.current.board);
           });
-          // TODO: Clearing the board via batched className updates
           statesToUpdate.push(() => setBlock(setup.current.block));
           statesToUpdate.push(() => setBlockIndex(setup.current.blockIndex));
           statesToUpdate.push(() => setPosition(setup.current.position));
+          for (let cell of boardElement.current.flat()) {
+            if (cell !== null) {
+              cell.className = `${cellColors[0]} ${CELL_WIDTH_CLASS_NAME} ${CELL_HEIGHT_CLASS_NAME} ${CELL_BASE_CLASS_NAME}`;
+            }
+          }
           for (const stateUpdate of statesToUpdate) {
             stateUpdate();
           }
