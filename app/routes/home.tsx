@@ -122,7 +122,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
         {
           columns,
           // Adding Rows for dropping in the blocks from above (They are not rendered)
-          rows: rows + streamOfBlocks[0].length,
+          rows: rows + BLOCK_HEIGHT,
         },
         { method: "GET" }
       );
