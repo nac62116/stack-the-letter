@@ -266,9 +266,6 @@ export default function Home({ loaderData }: Route.ComponentProps) {
   // Fetching tetris board and streamOfBlocks for current screen dimensions
   React.useEffect(() => {
     if (tetrisBoard === undefined) {
-      // TODO: Check if the rows and columns here match with the screen size
-      // $CELL_GAP because a gap is between the cells,
-      // so every cell is $CELL_GAP + $CELL_WIDTH wide except one thats only $CELL_WIDTH wide
       const columns = Math.floor(
         (window.innerWidth + CELL_GAP) / (CELL_WIDTH + CELL_GAP)
       );
@@ -590,22 +587,24 @@ export default function Home({ loaderData }: Route.ComponentProps) {
         ) : null}
         {fetcher.data !== undefined &&
         fetcher.data.tetrisBoard !== undefined ? (
-          <TetrisBoardComponent.Board id="tetris-board">
-            {fetcher.data.tetrisBoard.map((row, rowIndex) =>
-              row.map((cellValue, columnIndex) =>
-                // The top $BLOCK_HEIGHT cells are not rendered
-                // and used to drop in the block from above.
-                setup.current.streamOfBlocks !== undefined &&
-                rowIndex >= setup.current.streamOfBlocks[0].length ? (
-                  <TetrisBoardComponent.Cell
-                    id={`row${rowIndex}column${columnIndex}`}
-                    key={`row${rowIndex}column${columnIndex}`}
-                    cellValue={cellValue}
-                  />
-                ) : null
-              )
-            )}
-          </TetrisBoardComponent.Board>
+          <div className={`${gameStatus === "running" ? "block" : "hidden"}`}>
+            <TetrisBoardComponent.Board id="tetris-board">
+              {fetcher.data.tetrisBoard.map((row, rowIndex) =>
+                row.map((cellValue, columnIndex) =>
+                  // The top $BLOCK_HEIGHT cells are not rendered
+                  // and used to drop in the block from above.
+                  setup.current.streamOfBlocks !== undefined &&
+                  rowIndex >= setup.current.streamOfBlocks[0].length ? (
+                    <TetrisBoardComponent.Cell
+                      id={`row${rowIndex}column${columnIndex}`}
+                      key={`row${rowIndex}column${columnIndex}`}
+                      cellValue={cellValue}
+                    />
+                  ) : null
+                )
+              )}
+            </TetrisBoardComponent.Board>
+          </div>
         ) : null}
       </div>
       <header className="absolute top-0 w-full h-8 pb-1 flex justify-between items-center gap-4 px-4 bg-gradient-to-r from-emerald-950 from-1% via-transparent via-50% to-emerald-950 to-99%">
