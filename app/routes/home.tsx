@@ -464,6 +464,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
           isTimeToMoveSidewards &&
           (left.current === true && right.current === true) === false
         ) {
+          // TODO: Rotating the current block at any frame in the render cycle
           // Moving current block to the left at any frame in the render cycle
           if (left.current === true) {
             statesToUpdate.push(() => setLastSideMove(timestamp));
