@@ -316,6 +316,5 @@ function getCellToUpdate(options: {
       cellColors[newCellValue] || FALLBACK_CELL_COLOR
     } ${CELL_WIDTH_CLASS_NAME} ${CELL_HEIGHT_CLASS_NAME} ${CELL_BASE_CLASS_NAME}`,
   };
-  console.log(cellToUpdate);
   return cellToUpdate;
 }

@@ -179,15 +179,6 @@ export default function Home({ loaderData }: Route.ComponentProps) {
     });
     setBoard(tetrisBoard);
   }
-  // TODO: Bug left and right movement not working and stopping game
-  // since introduced below boardElement
-  // Maybe the batched updates need their arguments to be stored for later call
-  // f.e. stateUpdates.push({
-  // set: () => setBoard(newState.board),
-  // arg: newState
-  // })
-  // etc...
-
   const boardElement = React.useRef<(Element | null)[][]>(
     initialSetup.boardElement
   );
@@ -274,12 +265,18 @@ export default function Home({ loaderData }: Route.ComponentProps) {
     const keydown = (event: KeyboardEvent) => {
       if (event.key === "Enter") {
         if (gameStatusRef.current !== "running") {
-          setGameStatus("running");
-          setBoard(setup.current.board);
+          const statesToUpdate: (() => void)[] = [];
+          statesToUpdate.push(() => setGameStatus("running"));
+          statesToUpdate.push(() => {
+            setBoard(setup.current.board);
+          });
           // TODO: Clearing the board via batched className updates
-          setBlock(setup.current.block);
-          setBlockIndex(setup.current.blockIndex);
-          setPosition(setup.current.position);
+          statesToUpdate.push(() => setBlock(setup.current.block));
+          statesToUpdate.push(() => setBlockIndex(setup.current.blockIndex));
+          statesToUpdate.push(() => setPosition(setup.current.position));
+          for (const stateUpdate of statesToUpdate) {
+            stateUpdate();
+          }
           startGame();
         }
       }
@@ -375,12 +372,14 @@ export default function Home({ loaderData }: Route.ComponentProps) {
         gameStatus: castToGameStatus(gameStatusRef.current),
       };
       let newState: typeof currentState | undefined;
-      let statesToUpdate: ((arg: any) => void)[] = [];
+      const statesToUpdate: (() => void)[] = [];
       let nextStep = false;
 
       // Moving current block down with the frequency defined in isTimeToMoveDown variable
       if (isTimeToMoveDown) {
-        statesToUpdate.push(() => setLastDownMove(timestamp));
+        statesToUpdate.push(() => {
+          setLastDownMove(timestamp);
+        });
         newState = moveBlock("down", currentState);
       }
       // Not moving when both left and right are pressed
@@ -402,7 +401,9 @@ export default function Home({ loaderData }: Route.ComponentProps) {
       // Checking if any movement did happen in this frame of the render cycle
       if (newState !== undefined) {
         // Update the tetris board state to trigger a rerender
-        statesToUpdate.push(() => setBoard(newState.board));
+        statesToUpdate.push(() => {
+          setBoard(newState.board);
+        });
         /** Now check how game state has changed and accordingly update following states if needed:
          * - block
          * - blockIndex
@@ -448,10 +449,12 @@ export default function Home({ loaderData }: Route.ComponentProps) {
         }
       } else {
         // No movement in this frame of the render cycle so no need to update states
+        // But request the next step to keep the game running
+        nextStep = true;
       }
       // Batched updates
       for (let stateUpdate of statesToUpdate) {
-        stateUpdate(newState);
+        stateUpdate();
       }
       if (newState !== undefined) {
         for (let cell of newState.cellsToUpdate) {
