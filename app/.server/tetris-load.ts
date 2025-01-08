@@ -3,7 +3,7 @@ import {
   DEFAULT_BLOCK,
   BLOCK_HEIGHT,
   type TetrisBlock,
-} from "./alphabet";
+} from "../shared/alphabet";
 import { splitStringAtIndex } from "./string-helper";
 
 export function transformTextToTetrisBlock(text: string): TetrisBlock {

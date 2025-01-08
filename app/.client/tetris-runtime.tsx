@@ -4,6 +4,7 @@ import {
   CELL_WIDTH_CLASS_NAME,
 } from "~/components/TetrisBoard";
 import type { loader } from "~/routes/home";
+import { BLOCK_HEIGHT } from "~/shared/alphabet";
 import {
   cellColors,
   FALLBACK_CELL_COLOR,
@@ -19,25 +20,35 @@ export type GameStatus =
   | "nextBlockPlease"
   | "youWon"
   | "gameOver";
+export type CellsToUpdate = {
+  element: Element | null;
+  className: string;
+}[];
 // Side movement is allowed every $SIDE_MOVEMENT_SPEED ms
-export const SIDE_MOVEMENT_SPEED = 40 as const;
+export const SIDE_MOVEMENT_SPEED = 30 as const;
 // Down movement is allowed every $DOWN_MOVEMENT_SPEED ms
 export const DOWN_MOVEMENT_SPEED = 200 as const;
 // Accelerated down movement is allowed every $ACCELERATED_DOWN_MOVEMENT_SPEED ms
-export const ACCELERATED_DOWN_MOVEMENT_SPEED = 40 as const;
+export const ACCELERATED_DOWN_MOVEMENT_SPEED = 30 as const;
 
 export function moveBlock(
   direction: MovementDirection,
   options: {
     board: NonNullable<TetrisBoard>;
+    boardElement: (Element | null)[][];
     block: TetrisBlock;
     position: Position;
     gameStatus: GameStatus;
+    cellsToUpdate: {
+      element: Element | null;
+      className: string;
+    }[];
   }
 ) {
-  const { board, block, position, gameStatus } = options;
+  const { board, boardElement, block, position, gameStatus, cellsToUpdate } =
+    options;
   if (gameStatus !== "running") {
-    return { board, block, position, gameStatus };
+    return { board, boardElement, block, position, gameStatus, cellsToUpdate };
   }
   let newBoard = board.map((row) => row.slice());
   // Here the explicit type gets lost due to map and slice function -> TetrisBlock is now number[][]
@@ -47,6 +58,7 @@ export function moveBlock(
   // - number[][] can have any length
   let newBlock = block.map((row) => row.slice());
   let isBlockEmpty = true;
+  let newCellsToUpdate = cellsToUpdate.map((cell) => cell);
 
   // Preparing the iteration over the board cells where the current block is on
   // If direction is down iterate from bottom to top
@@ -119,6 +131,8 @@ export function moveBlock(
     if (canMoveSidewards === false) {
       return {
         board,
+        boardElement,
+        cellsToUpdate,
         block,
         position,
         gameStatus: castToGameStatus("running"),
@@ -149,26 +163,38 @@ export function moveBlock(
         // Drop the cell on the board if needed
         if (boardCellValue !== blockCellValue) {
           newBoard[rowIndex][columnIndex] = blockCellValue;
-          changeCellOnHTMLBoard({
-            rowIndex,
-            columnIndex,
-            newCellValue: blockCellValue,
-          });
+          newCellsToUpdate = [
+            ...newCellsToUpdate,
+            getCellToUpdate({
+              boardElement,
+              rowIndex,
+              columnIndex,
+              newCellValue: blockCellValue,
+            }),
+          ];
         }
         if (direction === "left" || direction === "right") {
           // you can move sidewards here because of early return before the for loops
-          changeCellOnHTMLBoard({
-            rowIndex,
-            columnIndex,
-            newCellValue: 0,
-          });
+          newCellsToUpdate = [
+            ...newCellsToUpdate,
+            getCellToUpdate({
+              boardElement,
+              rowIndex,
+              columnIndex,
+              newCellValue: 0,
+            }),
+          ];
           newBoard[rowIndex][columnIndex] = 0;
-          changeCellOnHTMLBoard({
-            rowIndex,
-            columnIndex:
-              direction === "left" ? columnIndex - 1 : columnIndex + 1,
-            newCellValue: blockCellValue,
-          });
+          newCellsToUpdate = [
+            ...newCellsToUpdate,
+            getCellToUpdate({
+              boardElement,
+              rowIndex,
+              columnIndex:
+                direction === "left" ? columnIndex - 1 : columnIndex + 1,
+              newCellValue: blockCellValue,
+            }),
+          ];
           newBoard[rowIndex][
             direction === "left" ? columnIndex - 1 : columnIndex + 1
           ] = blockCellValue;
@@ -190,6 +216,8 @@ export function moveBlock(
             if (rowIndex <= block.length - 1) {
               return {
                 board,
+                boardElement,
+                cellsToUpdate,
                 block,
                 position,
                 gameStatus: castToGameStatus("gameOver"),
@@ -199,17 +227,25 @@ export function moveBlock(
             // - else you are allowed to move down -> do that by:
             // -> setting your corresponding newBoard cell value to 0
             // -> setting the newBoard cell below you to your value
-            changeCellOnHTMLBoard({
-              rowIndex,
-              columnIndex,
-              newCellValue: 0,
-            });
+            newCellsToUpdate = [
+              ...newCellsToUpdate,
+              getCellToUpdate({
+                boardElement,
+                rowIndex,
+                columnIndex,
+                newCellValue: 0,
+              }),
+            ];
             newBoard[rowIndex][columnIndex] = 0;
-            changeCellOnHTMLBoard({
-              rowIndex: rowIndex + 1,
-              columnIndex,
-              newCellValue: blockCellValue,
-            });
+            newCellsToUpdate = [
+              ...newCellsToUpdate,
+              getCellToUpdate({
+                boardElement,
+                rowIndex: rowIndex + 1,
+                columnIndex,
+                newCellValue: blockCellValue,
+              }),
+            ];
             newBoard[rowIndex + 1][columnIndex] = blockCellValue;
           }
         } else {
@@ -223,6 +259,8 @@ export function moveBlock(
   const tetrisBlock = castToTetrisBlock(newBlock, block);
   return {
     board: newBoard,
+    boardElement,
+    cellsToUpdate: newCellsToUpdate,
     block: tetrisBlock,
     position: {
       x:
@@ -251,22 +289,33 @@ function castToTetrisBlock(block: number[][], originalBlock: TetrisBlock) {
   return newBlock as TetrisBlock;
 }
 
-function castToGameStatus(gameStatus: GameStatus) {
+export function castToGameStatus(gameStatus: GameStatus) {
   return gameStatus;
 }
 
-function changeCellOnHTMLBoard(options: {
+function getCellToUpdate(options: {
+  boardElement: (Element | null)[][];
   rowIndex: number;
   columnIndex: number;
   newCellValue: number;
 }) {
-  const { rowIndex, columnIndex, newCellValue } = options;
-  const cellElement = document.querySelector(
-    `#row${rowIndex}column${columnIndex}`
-  );
-  if (cellElement !== null) {
-    cellElement.className = `${
-      cellColors[newCellValue] || FALLBACK_CELL_COLOR
-    } ${CELL_WIDTH_CLASS_NAME} ${CELL_HEIGHT_CLASS_NAME} ${CELL_BASE_CLASS_NAME}`;
+  const { boardElement, rowIndex, columnIndex, newCellValue } = options;
+  if (
+    rowIndex < BLOCK_HEIGHT
+    // boardElement[rowIndex] === undefined ||
+    // boardElement[rowIndex][columnIndex] === undefined
+  ) {
+    return {
+      element: null,
+      className: "",
+    };
   }
+  const cellToUpdate = {
+    element: boardElement[rowIndex][columnIndex],
+    className: `${
+      cellColors[newCellValue] || FALLBACK_CELL_COLOR
+    } ${CELL_WIDTH_CLASS_NAME} ${CELL_HEIGHT_CLASS_NAME} ${CELL_BASE_CLASS_NAME}`,
+  };
+  console.log(cellToUpdate);
+  return cellToUpdate;
 }
