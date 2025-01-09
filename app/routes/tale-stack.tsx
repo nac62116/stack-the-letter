@@ -582,10 +582,19 @@ export default function Home({ loaderData }: Route.ComponentProps) {
               <section className="flex flex-col gap-2 border border-gray-600 bg-black p-4 rounded-xl">
                 <h2 className="text-2xl text-start">How to play?</h2>
                 <ul className="text-left">
-                  <li>Press Enter to start the game.</li>
-                  <li>Press Escape to stop the game.</li>
-                  <li>Arrow keys to move blocks.</li>
-                  <li>📜 Find out {author}s' story.</li>
+                  <li className="flex">
+                    <div className="w-7">🚪</div>Press Enter to start the game.
+                  </li>
+                  <li className="flex">
+                    <div className="w-7">🏃</div>Press Escape to stop the game.
+                  </li>
+                  <li className="flex">
+                    <div className="w-7">⌨️</div>Arrow keys to move blocks.
+                  </li>
+                  <li className="flex">
+                    <div className="w-7">📜</div>Find out {author}
+                    s' story.
+                  </li>
                 </ul>
               </section>
             </div>
