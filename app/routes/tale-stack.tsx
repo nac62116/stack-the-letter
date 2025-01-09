@@ -106,10 +106,10 @@ export default function Home({ loaderData }: Route.ComponentProps) {
 
   // References to the game for usage in key handlers and game loop
   // Game state refs
-  const [gameStatus, _setGameStatus] = React.useState(initialSetup.gameStatus);
-  const gameStatusRef = React.useRef(initialSetup.gameStatus);
+  const [_gameStatus, _setGameStatus] = React.useState(initialSetup.gameStatus);
+  const gameStatus = React.useRef(initialSetup.gameStatus);
   const setGameStatus = (newGameStatus: typeof initialSetup.gameStatus) => {
-    gameStatusRef.current = newGameStatus;
+    gameStatus.current = newGameStatus;
     _setGameStatus(newGameStatus);
   };
   const board = React.useRef(initialSetup.board);
@@ -162,12 +162,12 @@ export default function Home({ loaderData }: Route.ComponentProps) {
     accelerate.current = newAcceleration;
   };
   // UI states
-  const [boardLoaded, _setBoardLoaded] = React.useState(
+  const [_boardLoaded, _setBoardLoaded] = React.useState(
     initialSetup.boardLoaded
   );
-  const boardLoadedRef = React.useRef(boardLoaded);
-  const setBoardLoaded = (newBoardLoaded: typeof boardLoaded) => {
-    boardLoadedRef.current = newBoardLoaded;
+  const boardLoaded = React.useRef(initialSetup.boardLoaded);
+  const setBoardLoaded = (newBoardLoaded: typeof initialSetup.boardLoaded) => {
+    boardLoaded.current = newBoardLoaded;
     _setBoardLoaded(newBoardLoaded);
   };
 
@@ -278,7 +278,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
     if (boardElement.current !== null) {
       const keydown = (event: KeyboardEvent) => {
         if (event.key === "Enter") {
-          if (gameStatusRef.current !== "running") {
+          if (gameStatus.current !== "running") {
             if (boardCellElements.current !== undefined) {
               const statesToUpdate: (() => void)[] = [];
               statesToUpdate.push(() => setGameStatus("running"));
@@ -310,7 +310,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
           }
         }
         if (event.key === "Escape") {
-          if (gameStatusRef.current !== "idle") {
+          if (gameStatus.current !== "idle") {
             setGameStatus("idle");
           }
         }
@@ -364,7 +364,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
     // -> Cycle frequency is Matching the screen refresh rate
     const step: FrameRequestCallback = (timestamp) => {
       // Early return if game status is not running
-      if (gameStatusRef.current !== "running") {
+      if (gameStatus.current !== "running") {
         return;
       }
       // Early return if board and all refs that depend on it are not yet loaded
@@ -404,7 +404,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
           cellsToUpdate: [],
           block: block.current,
           position: position.current,
-          gameStatus: castToGameStatus(gameStatusRef.current),
+          gameStatus: castToGameStatus(gameStatus.current),
         };
         let newState: typeof currentState | undefined;
         const statesToUpdate: (() => void)[] = [];
@@ -509,7 +509,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
         console.error("Started game loop without loaded board");
       }
     };
-    if (gameStatusRef.current === "running") {
+    if (gameStatus.current === "running") {
       window.requestAnimationFrame(step);
     }
   };
@@ -520,7 +520,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
       {/* TODO: Mobile controls */}
       <div id="header-placeholder" className="w-full h-8" />
       <div className="grid grid-cols-1 justify-center text-center gap-4">
-        {gameStatus === "idle" ? (
+        {gameStatus.current === "idle" ? (
           <>
             <p>
               {author} wants to tell you a story named "{story.headline}"
@@ -528,7 +528,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
             <p>But the story is scrambled into blocks...</p>
             <p>Press Enter to take a look at it.</p>
           </>
-        ) : gameStatus === "youWon" ? (
+        ) : gameStatus.current === "youWon" ? (
           <>
             <h1>You got it!</h1>
             <p>Here is the full story from {author}</p>
@@ -537,7 +537,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
             <p>{story.regards}</p>
             <p>Press Enter to try again.</p>
           </>
-        ) : gameStatus === "gameOver" ? (
+        ) : gameStatus.current === "gameOver" ? (
           <>
             <h1>Cliff hanger</h1>
             <p>Your blocks are stacked to the top.</p>
@@ -548,7 +548,9 @@ export default function Home({ loaderData }: Route.ComponentProps) {
         {setup.current.board !== undefined ? (
           <div
             ref={boardElement}
-            className={`${gameStatus === "running" ? "block" : "hidden"}`}
+            className={`${
+              gameStatus.current === "running" ? "block" : "hidden"
+            }`}
           >
             <BoardComponent id="board">
               {setup.current.board.map((row, rowIndex) =>
@@ -572,7 +574,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
       <header className="absolute top-0 w-full h-8 pb-1 flex justify-between items-center gap-4 px-4 bg-gradient-to-r from-emerald-950 from-1% via-transparent via-50% to-emerald-950 to-99%">
         <h1 className="text-nowrap">
           Tale Stack
-          {boardLoaded === false ? " - Board loading..." : ""}
+          {boardLoaded.current === false ? " - Board loading..." : ""}
         </h1>
         <nav className="w-full flex justify-end">
           <div className="flex items-center group">
