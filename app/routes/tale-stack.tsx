@@ -97,9 +97,11 @@ export default function Home({ loaderData }: Route.ComponentProps) {
     boardLoaded: false,
   };
   // Keep track of the initial setup because it changes when document is hydrated
+  const [_setup, _setSetup] = React.useState(initialSetup);
   const setup = React.useRef(initialSetup);
   const setSetup = (newSetup: typeof initialSetup) => {
     setup.current = newSetup;
+    _setSetup(newSetup);
   };
 
   // References to the game for usage in key handlers and game loop
@@ -194,7 +196,9 @@ export default function Home({ loaderData }: Route.ComponentProps) {
     if (rows < minRows) {
       rows = minRows;
     }
-    const board = getBoard(columns, rows);
+    // Add $BLOCK_HEIGHT cells on top of the board to drop in the blocks from above
+    // These will not be rendered (see map in below html)
+    const board = getBoard(columns, rows + BLOCK_HEIGHT);
 
     // TODO: Cut story into nice readable pieces (aka Blocks)
     // f.e.
@@ -267,12 +271,10 @@ export default function Home({ loaderData }: Route.ComponentProps) {
         stateUpdate();
       }
     }
-  }, [boardElement.current]);
+  }, [setup.current.board]);
 
   // Handler for user input
   React.useEffect(() => {
-    // TODO: Debug this
-    console.log("boardElement.current", boardElement.current);
     if (boardElement.current !== null) {
       const keydown = (event: KeyboardEvent) => {
         if (event.key === "Enter") {
