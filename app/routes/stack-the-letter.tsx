@@ -580,7 +580,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
                 <h2 className="text-2xl text-start">How to play?</h2>
                 <ul className="text-left">
                   <li className="flex">
-                    <div className="w-7">🚪</div>Press Enter to start the game.
+                    <div className="w-7">💌</div>Press Enter to start the game.
                   </li>
                   <li className="flex">
                     <div className="w-7">🏃</div>Press Escape to stop the game.
