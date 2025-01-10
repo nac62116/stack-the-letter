@@ -1,9 +1,9 @@
-name: tale-stack
+name: stack-the-letter
 
 services:
-  tale-stack-service:
-    image: tale-stack-image:latest  # Use the image built in the previous step
-    container_name: tale-stack  # Name the container
+  stack-the-letter-service:
+    image: stack-the-letter-image:latest  # Use the image built in the previous step
+    container_name: stack-the-letter  # Name the container
     restart: unless-stopped  # Restart the container unless it was explicitly stopped
     build:
       context: .  # The build context is the current directory

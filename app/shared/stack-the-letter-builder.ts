@@ -50,24 +50,24 @@ export function getBoard(columns: number, rows: number): Board {
 
 // TODO: Implement this function
 export function getReadableBlocks(options: {
-  story: {
+  letter: {
     headline: string;
     message: string;
     regards: string;
   };
   columns: number;
 }) {
-  const { story, columns } = options;
+  const { letter, columns } = options;
   const streamOfBlocks: Block[] = [];
-  const storyInWords = {
-    headline: story.headline.toLowerCase().split(" "),
-    message: story.message.toLowerCase().split(" "),
-    regards: story.regards.toLowerCase().split(" "),
+  const letterInWords = {
+    headline: letter.headline.toLowerCase().split(" "),
+    message: letter.message.toLowerCase().split(" "),
+    regards: letter.regards.toLowerCase().split(" "),
   };
   let lastLongestSentence = "";
   let possiblyLongestSentence = "";
   let wordIndex = 0;
-  for (const word of storyInWords.headline) {
+  for (const word of letterInWords.headline) {
     if (possiblyLongestSentence === "") {
       possiblyLongestSentence = word;
       continue;
@@ -111,7 +111,7 @@ export function getReadableBlocks(options: {
       if (wordIndex !== 0) {
         possiblyLongestSentence = `${possiblyLongestSentence} ${word}`;
       }
-      if (wordIndex === storyInWords.headline.length - 1) {
+      if (wordIndex === letterInWords.headline.length - 1) {
         const longestPossibleBlock = transformTextToBlock(
           possiblyLongestSentence
         );

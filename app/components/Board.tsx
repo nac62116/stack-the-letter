@@ -13,7 +13,7 @@ import {
   CELL_HEIGHT,
   CELL_WIDTH,
   CELL_GAP,
-} from "app/shared/tale-stack-builder";
+} from "~/shared/stack-the-letter-builder";
 
 /** Board size is currently capped to 1280x720 pixel resolution.
  * This size leads to ...

@@ -8,7 +8,7 @@ import {
   cellColors,
   FALLBACK_CELL_COLOR,
 } from "~/shared/dynamic-cell-color-map";
-import type { Board } from "./tale-stack-builder";
+import type { Board } from "./stack-the-letter-builder";
 
 type MovementDirection = "left" | "right" | "down";
 export type BoardCellElements = (Element | null)[][];

@@ -1,9 +1,9 @@
-import type { Route } from "./+types/tale-stack";
+import type { Route } from "./+types/stack-the-letter";
 import {
   getBoard,
   getReadableBlocks,
   type Board,
-} from "~/shared/tale-stack-builder";
+} from "~/shared/stack-the-letter-builder";
 import React from "react";
 import {
   ACCELERATED_DOWN_MOVEMENT_SPEED,
@@ -15,7 +15,7 @@ import {
   moveBlock,
   type Position,
   SIDE_MOVEMENT_SPEED,
-} from "~/shared/tale-stack-runtime";
+} from "~/shared/stack-the-letter-runtime";
 import {
   CELL_BASE_CLASS_NAME,
   CELL_HEIGHT_CLASS_NAME,
@@ -32,40 +32,40 @@ import {
   MAX_BOARD_ROWS,
   MIN_BOARD_COLUMNS,
   MIN_BOARD_ROWS,
-} from "~/shared/tale-stack-builder";
+} from "~/shared/stack-the-letter-builder";
 import { cellColors } from "~/shared/dynamic-cell-color-map";
 
 export function meta({
   data: {
     author,
-    story: { headline },
+    letter: { headline },
   },
 }: Route.MetaArgs) {
   return [
-    { title: `Tale Stack - ${author}s' Story` },
+    { title: `Stack the Letter - ${author}s' Letter` },
     { name: "description", content: headline },
   ];
 }
 
 export async function loader({}: Route.LoaderArgs) {
-  // FEATURE: Let users produce their own story
+  // FEATURE: Let users write their own letters
   // FEATURE: New setting: Let user choose their own color palette
   const author = "Colin";
-  const story = {
+  const letter = {
     headline: "Hi i bims der Colin und hab ne ganz große Headline.",
     message:
-      "Was eht so bei dir? Ich hoffe du hast einen guten Tag. Hier eine kleine Nachricht von mir, verpackt in einem Spiel. Viel Spaß bei Tale Stack :)",
+      "Was eht so bei dir? Ich hoffe du hast einen guten Tag. Hier eine kleine Nachricht von mir, verpackt in einem Spiel. Viel Spaß bei Stack The Letter :)",
     regards: "Liebe Grüße, Colin",
   } as const;
 
   return {
     author,
-    story,
+    letter,
   } as const;
 }
 
 export default function Home({ loaderData }: Route.ComponentProps) {
-  const { author, story } = loaderData;
+  const { author, letter } = loaderData;
 
   const initialSetup: {
     gameStatus: GameStatus;
@@ -204,7 +204,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
     // Add $BLOCK_HEIGHT cells on top of the board to drop in the blocks from above
     // These will not be rendered (see map in below html)
     const board = getBoard(columns, rows + BLOCK_HEIGHT);
-    const streamOfBlocks = getReadableBlocks({ story, columns });
+    const streamOfBlocks = getReadableBlocks({ letter, columns });
     const position = {
       x:
         Math.floor(board[0].length / 2) -
@@ -521,26 +521,24 @@ export default function Home({ loaderData }: Route.ComponentProps) {
       <div className="grid grid-cols-1 justify-center text-center gap-4">
         {gameStatus.current === "idle" ? (
           <>
-            <p>
-              {author} wants to tell you a story named "{story.headline}"
-            </p>
-            <p>But the story is scrambled into blocks...</p>
+            <p>{author} wrote you a letter.</p>
+            <p>But the letter is scrambled into blocks...</p>
             <p>Press Enter to take a look at it.</p>
           </>
         ) : gameStatus.current === "youWon" ? (
           <>
             <h1>You got it!</h1>
-            <p>Here is the full story from {author}</p>
-            <h2>{story.headline}</h2>
-            <p>{story.message}</p>
-            <p>{story.regards}</p>
+            <p>Here is the full letter from {author}</p>
+            <h2>{letter.headline}</h2>
+            <p>{letter.message}</p>
+            <p>{letter.regards}</p>
             <p>Press Enter to try again.</p>
           </>
         ) : gameStatus.current === "gameOver" ? (
           <>
             <h1>Cliff hanger</h1>
             <p>Your blocks are stacked to the top.</p>
-            <p>But your story wasn't finished yet.</p>
+            <p>But the letter wasn't finished yet.</p>
             <p>Press Enter to try again.</p>
           </>
         ) : null}
@@ -572,7 +570,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
       </div>
       <header className="absolute top-0 w-full h-8 pb-1 flex justify-between items-center gap-4 px-4 bg-gradient-to-r from-emerald-950 from-1% via-transparent via-50% to-emerald-950 to-99%">
         <h1 className="text-nowrap">
-          Tale Stack
+          Stack The Letter
           {boardLoaded.current === false ? " - Board loading..." : ""}
         </h1>
         <nav className="w-full flex justify-end">
@@ -591,8 +589,8 @@ export default function Home({ loaderData }: Route.ComponentProps) {
                     <div className="w-7">⌨️</div>Arrow keys to move blocks.
                   </li>
                   <li className="flex">
-                    <div className="w-7">📜</div>Find out {author}
-                    s' story.
+                    <div className="w-7">📜</div>Find out what {author} wrote
+                    you.
                   </li>
                 </ul>
               </section>
