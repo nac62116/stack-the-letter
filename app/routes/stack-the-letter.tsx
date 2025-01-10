@@ -362,8 +362,11 @@ export default function Home({ loaderData }: Route.ComponentProps) {
     // Render cycle
     // -> Cycle frequency is Matching the screen refresh rate
     const step: FrameRequestCallback = (timestamp) => {
+      console.time("Step: ");
       // Early return if game status is not running
       if (gameStatus.current !== "running") {
+        console.timeEnd("Step: ");
+        console.log("Early return caused by gameStatus.current !== running");
         return;
       }
       // Early return if board and all refs that depend on it are not yet loaded
@@ -387,34 +390,35 @@ export default function Home({ loaderData }: Route.ComponentProps) {
           left.current === false &&
           right.current === false
         ) {
+          console.timeEnd("Step: ");
           window.requestAnimationFrame(step);
           return;
         }
         const currentState: {
           board: typeof board.current;
           boardCellElements: typeof boardCellElements.current;
-          cellsToUpdate: CellsToUpdate;
           block: typeof block.current;
           position: typeof position.current;
           gameStatus: GameStatus;
         } = {
           board: board.current,
           boardCellElements: boardCellElements.current,
-          cellsToUpdate: [],
           block: block.current,
           position: position.current,
           gameStatus: castToGameStatus(gameStatus.current),
         };
-        let newState: typeof currentState | undefined;
+        let movementResult: ReturnType<typeof moveBlock> | undefined;
         const statesToUpdate: (() => void)[] = [];
         let nextStep = false;
 
         // Moving current block down with the frequency defined in isTimeToMoveDown variable
         if (isTimeToMoveDown) {
+          console.time("moveBlock down: ");
           statesToUpdate.push(() => {
             setLastDownMove(timestamp);
           });
-          newState = moveBlock("down", currentState);
+          movementResult = moveBlock("down", currentState);
+          console.timeEnd("moveBlock down: ");
         }
         // Not moving when both left and right are pressed
         if (
@@ -424,20 +428,47 @@ export default function Home({ loaderData }: Route.ComponentProps) {
           // TODO: Rotating the current block at any frame in the render cycle
           // Moving current block to the left at any frame in the render cycle
           if (left.current === true) {
+            console.time("moveBlock left: ");
             statesToUpdate.push(() => setLastSideMove(timestamp));
-            newState = moveBlock("left", newState || currentState);
+            movementResult = moveBlock(
+              "left",
+              movementResult !== undefined
+                ? {
+                    board: movementResult.board,
+                    boardCellElements: currentState.boardCellElements,
+                    block: movementResult.block,
+                    position: movementResult.position,
+                    gameStatus: movementResult.gameStatus,
+                  }
+                : currentState
+            );
+            console.timeEnd("moveBlock left: ");
           }
           // Moving current block to the right at any frame in the render cycle
           if (right.current === true) {
+            console.time("moveBlock right: ");
             statesToUpdate.push(() => setLastSideMove(timestamp));
-            newState = moveBlock("right", newState || currentState);
+            movementResult = moveBlock(
+              "right",
+              movementResult !== undefined
+                ? {
+                    board: movementResult.board,
+                    boardCellElements: currentState.boardCellElements,
+                    block: movementResult.block,
+                    position: movementResult.position,
+                    gameStatus: movementResult.gameStatus,
+                  }
+                : currentState
+            );
+            console.timeEnd("moveBlock right: ");
           }
         }
+        console.time("Gather state updates: ");
         // Checking if any movement did happen in this frame of the render cycle
-        if (newState !== undefined) {
+        if (movementResult !== undefined) {
           // Update the board state
           statesToUpdate.push(() => {
-            setBoard(newState.board);
+            setBoard(movementResult.board);
           });
           /** Now check how game state has changed and accordingly update following states if needed:
            * - block
@@ -446,12 +477,12 @@ export default function Home({ loaderData }: Route.ComponentProps) {
            * - gameState
            * And request the next frame if needed
            */
-          if (newState.gameStatus === "running") {
+          if (movementResult.gameStatus === "running") {
             statesToUpdate.push(() => setGameStatus("running"));
-            statesToUpdate.push(() => setBlock(newState.block));
-            statesToUpdate.push(() => setPosition(newState.position));
+            statesToUpdate.push(() => setBlock(movementResult.block));
+            statesToUpdate.push(() => setPosition(movementResult.position));
             nextStep = true;
-          } else if (newState.gameStatus === "nextBlockPlease") {
+          } else if (movementResult.gameStatus === "nextBlockPlease") {
             // TODO: Clearing the board
             // Check if there are at least $X (f.e 10) cells with the same color in one place
             // Meaning all are neighbors of each other and share the same color
@@ -468,19 +499,19 @@ export default function Home({ loaderData }: Route.ComponentProps) {
               statesToUpdate.push(() =>
                 setPosition({
                   x:
-                    Math.floor(newState.board[0].length / 2) -
+                    Math.floor(movementResult.board[0].length / 2) -
                     Math.floor(nextBlock[0].length / 2),
                   y: 0,
                 })
               );
               nextStep = true;
             }
-          } else if (newState.gameStatus === "gameOver") {
+          } else if (movementResult.gameStatus === "gameOver") {
             statesToUpdate.push(() => setGameStatus("gameOver"));
-          } else if (newState.gameStatus === "idle") {
+          } else if (movementResult.gameStatus === "idle") {
             statesToUpdate.push(() => setGameStatus("idle"));
           } else {
-            console.error("Unknown game state", newState.gameStatus);
+            console.error("Unknown game state", movementResult.gameStatus);
             statesToUpdate.push(() => setGameStatus("idle"));
           }
         } else {
@@ -488,19 +519,25 @@ export default function Home({ loaderData }: Route.ComponentProps) {
           // But request the next step to keep the game running
           nextStep = true;
         }
+        console.timeEnd("Gather state updates: ");
+        console.time("Batched updates: ");
         // Batched updates
         for (let stateUpdate of statesToUpdate) {
           stateUpdate();
         }
+        console.timeEnd("Batched updates: ");
+        console.time("Batched rerendering: ");
         // Batched rerendering of the board
-        if (newState !== undefined) {
-          for (let cell of newState.cellsToUpdate) {
+        if (movementResult !== undefined) {
+          for (let cell of movementResult.cellsToUpdate) {
             const { element, className } = cell;
             if (element !== null) {
               element.className = className;
             }
           }
         }
+        console.timeEnd("Batched rerendering: ");
+        console.timeEnd("Step: ");
         if (nextStep) {
           window.requestAnimationFrame(step);
         }
