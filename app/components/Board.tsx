@@ -4,17 +4,16 @@ import {
   FALLBACK_CELL_COLOR,
 } from "~/shared/dynamic-cell-color-map";
 import { gridCols, gridRows } from "~/shared/dynamic-grid-map";
+import { height, width } from "~/shared/dynamic-size-map";
 import {
-  CELL_GAP,
-  CELL_HEIGHT,
-  CELL_WIDTH,
-  height,
   MAX_BOARD_HEIGHT,
   MAX_BOARD_WIDTH,
-  MIN_BOARD_HEIGHT,
   MIN_BOARD_WIDTH,
-  width,
-} from "~/shared/dynamic-size-map";
+  MIN_BOARD_HEIGHT,
+  CELL_HEIGHT,
+  CELL_WIDTH,
+  CELL_GAP,
+} from "app/shared/tale-stack-builder";
 
 /** Board size is currently capped to 1280x720 pixel resolution.
  * This size leads to ...

@@ -1,5 +1,3 @@
-import { BLOCK_HEIGHT } from "./alphabet";
-
 // Arrays were generated via helper-scripts/generate-map-for-dynamic-tailwind-classes
 
 /** Board size is currently capped to 1280x720 pixel resolution.
@@ -17,20 +15,6 @@ import { BLOCK_HEIGHT } from "./alphabet";
  * ... the tailwind.config.ts file ...
  * ... and the board size initialization in Board.tsx.
  */
-export const MAX_BOARD_WIDTH = 1280;
-export const MAX_BOARD_HEIGHT = 720;
-export const MIN_BOARD_WIDTH = 320;
-export const MIN_BOARD_HEIGHT = 178;
-export const CELL_WIDTH = 4;
-export const CELL_HEIGHT = 4;
-export const CELL_GAP = 2;
-export const MAX_BOARD_COLUMNS =
-  (MAX_BOARD_WIDTH + CELL_GAP) / (CELL_WIDTH + CELL_GAP);
-export const MIN_BOARD_COLUMNS =
-  (MIN_BOARD_WIDTH + CELL_GAP) / (CELL_WIDTH + CELL_GAP);
-export const MAX_BOARD_ROWS =
-  (MAX_BOARD_HEIGHT + BLOCK_HEIGHT + CELL_GAP) / (CELL_HEIGHT + CELL_GAP);
-export const MIN_BOARD_ROWS = 3 * BLOCK_HEIGHT;
 
 /** To change the board size dynamically,
  * we need to explicitly map supported screen width and height values

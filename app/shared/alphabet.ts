@@ -586,6 +586,30 @@ export const blockAlphabet: {
     [0, 0, 0, 0, 0, 0],
     [0, 0, 0, 0, 0, 0],
   ],
+  "(": [
+    [0, 0, 3, 0],
+    [0, 3, 3, 3],
+    [3, 3, 3, 0],
+    [3, 3, 0, 0],
+    [3, 3, 0, 0],
+    [3, 3, 0, 0],
+    [3, 3, 0, 0],
+    [3, 3, 3, 0],
+    [0, 3, 3, 3],
+    [0, 0, 3, 0],
+  ],
+  ")": [
+    [0, 4, 0, 0],
+    [4, 4, 4, 0],
+    [0, 4, 4, 4],
+    [0, 0, 4, 4],
+    [0, 0, 4, 4],
+    [0, 0, 4, 4],
+    [0, 0, 4, 4],
+    [0, 4, 4, 4],
+    [4, 4, 4, 0],
+    [0, 4, 0, 0],
+  ],
   // prettier-ignore
   " ": [
     [0],
@@ -615,6 +639,4 @@ export const blockAlphabet: {
 
 export const DEFAULT_BLOCK = blockAlphabet["?"];
 
-export function getDefaultBlock() {
-  return DEFAULT_BLOCK;
-}
+export const EMPTY_BLOCK = [[], [], [], [], [], [], [], [], [], []] as Block;

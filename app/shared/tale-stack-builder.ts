@@ -3,10 +3,41 @@ import {
   DEFAULT_BLOCK,
   BLOCK_HEIGHT,
   type Block,
+  EMPTY_BLOCK,
 } from "./alphabet";
 
 // Board
 export type Board = number[][];
+/** Board size is currently capped to 1280x720 pixel resolution.
+ * This size leads to ...
+ * ... Math.floor((1280 + $CELL_GAP) / ($CELL_WIDTH + $CELL_GAP)) ...
+ * ... * Math.floor((720 + $CELL_GAP) / ($CELL_WIDTH + $CELL_GAP)) ...
+ * ... Cells.
+ * Example:
+ * $CELL_WIDTH = 4
+ * $CELL_GAP = 2
+ * 214 * 120 = 25680 cells
+ * At this moment i don't want to make it more performance heavy.
+ * This cap is realized by ...
+ * ... the dynamic-grid-map.ts file ...
+ * ... the tailwind.config.ts file ...
+ * ... and the board size initialization in Board.tsx.
+ */
+export const MAX_BOARD_WIDTH = 1280;
+export const MAX_BOARD_HEIGHT = 720;
+export const MIN_BOARD_WIDTH = 320;
+export const MIN_BOARD_HEIGHT = 178;
+export const CELL_WIDTH = 4;
+export const CELL_HEIGHT = 4;
+export const CELL_GAP = 2;
+export const MAX_BOARD_COLUMNS =
+  (MAX_BOARD_WIDTH + CELL_GAP) / (CELL_WIDTH + CELL_GAP);
+export const MIN_BOARD_COLUMNS =
+  (MIN_BOARD_WIDTH + CELL_GAP) / (CELL_WIDTH + CELL_GAP);
+export const MAX_BOARD_ROWS =
+  (MAX_BOARD_HEIGHT + BLOCK_HEIGHT + CELL_GAP) / (CELL_HEIGHT + CELL_GAP);
+export const MIN_BOARD_ROWS = 3 * BLOCK_HEIGHT;
+const PADDING_X_BOARD_COLUMNS = 20;
 
 export function getBoard(columns: number, rows: number): Board {
   const board: Board = [
@@ -17,8 +48,85 @@ export function getBoard(columns: number, rows: number): Board {
   return board;
 }
 
-export function transformTextToBlock(text: string): Block {
-  let block: Block = [[], [], [], [], [], [], [], [], [], []];
+// TODO: Implement this function
+export function getReadableBlocks(options: {
+  story: {
+    headline: string;
+    message: string;
+    regards: string;
+  };
+  columns: number;
+}) {
+  const { story, columns } = options;
+  const streamOfBlocks: Block[] = [];
+  const storyInWords = {
+    headline: story.headline.toLowerCase().split(" "),
+    message: story.message.toLowerCase().split(" "),
+    regards: story.regards.toLowerCase().split(" "),
+  };
+  let lastLongestSentence = "";
+  let possiblyLongestSentence = "";
+  let wordIndex = 0;
+  for (const word of storyInWords.headline) {
+    if (possiblyLongestSentence === "") {
+      possiblyLongestSentence = word;
+      continue;
+    }
+    const lastBlock = transformTextToBlock(lastLongestSentence);
+    const block = transformTextToBlock(possiblyLongestSentence);
+    if (block[0].length > columns - 2 * PADDING_X_BOARD_COLUMNS) {
+      if (lastBlock[0].length > columns - 2 * PADDING_X_BOARD_COLUMNS) {
+        // FEATURE: Split on syllables
+        const firstPartOfWord = `${lastLongestSentence.substring(
+          0,
+          Math.floor(lastLongestSentence.length / 2)
+        )}-`;
+        const secondPartOfWord = lastLongestSentence.substring(
+          Math.floor(lastLongestSentence.length / 2)
+        );
+        const firstBlock = transformTextToBlock(firstPartOfWord);
+        const secondBlock = transformTextToBlock(secondPartOfWord);
+        if (
+          firstBlock[0].length > columns - 2 * PADDING_X_BOARD_COLUMNS ||
+          secondBlock[0].length > columns - 2 * PADDING_X_BOARD_COLUMNS
+        ) {
+          console.error(
+            `First part of word '${firstPartOfWord}' is too long for board. The whole word ${lastLongestSentence} will be left out.`
+          );
+          lastLongestSentence = "";
+          possiblyLongestSentence = word;
+        } else {
+          streamOfBlocks.push(firstBlock);
+          streamOfBlocks.push(secondBlock);
+          lastLongestSentence = "";
+          possiblyLongestSentence = word;
+        }
+      } else {
+        streamOfBlocks.push(lastBlock);
+        lastLongestSentence = "";
+        possiblyLongestSentence = word;
+      }
+    } else {
+      lastLongestSentence = possiblyLongestSentence;
+      if (wordIndex !== 0) {
+        possiblyLongestSentence = `${possiblyLongestSentence} ${word}`;
+      }
+      if (wordIndex === storyInWords.headline.length - 1) {
+        const longestPossibleBlock = transformTextToBlock(
+          possiblyLongestSentence
+        );
+        streamOfBlocks.push(longestPossibleBlock);
+      }
+    }
+    wordIndex++;
+  }
+  // TODO: Same with message and regards
+  // maybe add a break into the else statement when there are .,- or other seperators?
+  return streamOfBlocks;
+}
+
+function transformTextToBlock(text: string): Block {
+  let block = EMPTY_BLOCK;
   const letters = text.split("");
   // seperator between words but not for the first word
   block = block.map((line, index) =>

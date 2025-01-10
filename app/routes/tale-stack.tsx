@@ -1,5 +1,9 @@
 import type { Route } from "./+types/tale-stack";
-import { getBoard, type Board } from "~/shared/tale-stack-builder";
+import {
+  getBoard,
+  getReadableBlocks,
+  type Board,
+} from "~/shared/tale-stack-builder";
 import React from "react";
 import {
   ACCELERATED_DOWN_MOVEMENT_SPEED,
@@ -28,7 +32,7 @@ import {
   MAX_BOARD_ROWS,
   MIN_BOARD_COLUMNS,
   MIN_BOARD_ROWS,
-} from "~/shared/dynamic-size-map";
+} from "~/shared/tale-stack-builder";
 import { cellColors } from "~/shared/dynamic-cell-color-map";
 
 export function meta({
@@ -48,9 +52,10 @@ export async function loader({}: Route.LoaderArgs) {
   // FEATURE: New setting: Let user choose their own color palette
   const author = "Colin";
   const story = {
-    headline: "ABCDEF GHIJKL MNO PQR STU VWX YZ",
-    message: "Ä Ö Ü ß ? ! , . - ; :",
-    regards: "012 345 6789",
+    headline: "Hi i bims der Colin und hab ne ganz große Headline.",
+    message:
+      "Was eht so bei dir? Ich hoffe du hast einen guten Tag. Hier eine kleine Nachricht von mir, verpackt in einem Spiel. Viel Spaß bei Tale Stack :)",
+    regards: "Liebe Grüße, Colin",
   } as const;
 
   return {
@@ -199,13 +204,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
     // Add $BLOCK_HEIGHT cells on top of the board to drop in the blocks from above
     // These will not be rendered (see map in below html)
     const board = getBoard(columns, rows + BLOCK_HEIGHT);
-
-    // TODO: Cut story into nice readable pieces (aka Blocks)
-    // f.e.
-    // headline check if its too long instead break into two lines
-    // or into single words if still too long
-    // sentence until next punctuation mark if too long consume next words to produce a block thats half a board wide by appending word after word and checking if it still fits.
-    const streamOfBlocks = [DEFAULT_BLOCK];
+    const streamOfBlocks = getReadableBlocks({ story, columns });
     const position = {
       x:
         Math.floor(board[0].length / 2) -
