@@ -72,13 +72,17 @@ export function moveBlock(
   const newBlock = block.map((row, rowIndex) =>
     row.map((cell, columnIndex) => {
       if (rowIndex === 0) {
-        let rowBelowLastActiveCellOfColumnIndex = block.findIndex(
+        // TODO: Calculate real last active cell of column
+        let lastActiveCell;
+        const rowAtLastActiveCellOfColumnIndex = block.findIndex(
           (tempRow) => tempRow[columnIndex] === 0
         );
-        if (rowBelowLastActiveCellOfColumnIndex === -1) {
-          rowBelowLastActiveCellOfColumnIndex = block.length + position.y;
+        let rowBelowLastActiveCellOfColumnIndex;
+        if (rowAtLastActiveCellOfColumnIndex === -1) {
+          rowBelowLastActiveCellOfColumnIndex = position.y + block.length;
         } else {
-          rowBelowLastActiveCellOfColumnIndex += position.y;
+          rowBelowLastActiveCellOfColumnIndex =
+            position.y + rowAtLastActiveCellOfColumnIndex + 1;
         }
         cellBelowLastActiveCellOfColumn =
           currentBoard[rowBelowLastActiveCellOfColumnIndex] !== undefined &&
@@ -194,7 +198,6 @@ export function moveBlock(
 
   console.time("Calculate new board cells: ");
 
-  // TODO: This does not work yet
   const newBoard = currentBoard.map((row, rowIndex) =>
     row.map((cell, columnIndex) => {
       const correspondingBlockCell =
