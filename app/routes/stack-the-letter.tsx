@@ -2,6 +2,7 @@ import type { Route } from "./+types/stack-the-letter";
 import {
   getBoard,
   getReadableBlocks,
+  transformTextToBlock,
   type Board,
 } from "~/shared/stack-the-letter-builder";
 import React from "react";
@@ -52,9 +53,9 @@ export async function loader({}: Route.LoaderArgs) {
   // FEATURE: New setting: Let user choose their own color palette
   const author = "Colin";
   const letter = {
-    headline: "Hi i bims der Colin und hab ne ganz große Headline.",
+    headline: "Hi i bims der Colin.",
     message:
-      "Was eht so bei dir? Ich hoffe du hast einen guten Tag. Hier eine kleine Nachricht von mir, verpackt in einem Spiel. Viel Spaß bei Stack The Letter :)",
+      "Was geht so bei dir? Ich hoffe du hast einen guten Tag. Hier eine kleine Nachricht von mir, verpackt in einem Spiel. Viel Spaß bei Stack The Letter :)",
     regards: "Liebe Grüße, Colin",
   } as const;
 
@@ -204,7 +205,14 @@ export default function Home({ loaderData }: Route.ComponentProps) {
     // Add $BLOCK_HEIGHT cells on top of the board to drop in the blocks from above
     // These will not be rendered (see map in below html)
     const board = getBoard(columns, rows + BLOCK_HEIGHT);
-    const streamOfBlocks = getReadableBlocks({ letter, columns });
+    // const streamOfBlocks = getReadableBlocks({ letter, columns });
+    const streamOfBlocks = [
+      transformTextToBlock(letter.headline.toLowerCase()),
+      ...letter.message
+        .split(" ")
+        .map((word) => transformTextToBlock(word.toLowerCase())),
+      transformTextToBlock(letter.regards.toLowerCase()),
+    ];
     const position = {
       x:
         Math.floor(board[0].length / 2) -
@@ -397,12 +405,14 @@ export default function Home({ loaderData }: Route.ComponentProps) {
         const currentState: {
           board: typeof board.current;
           boardCellElements: typeof boardCellElements.current;
+          cellsToUpdate: CellsToUpdate;
           block: typeof block.current;
           position: typeof position.current;
           gameStatus: GameStatus;
         } = {
           board: board.current,
           boardCellElements: boardCellElements.current,
+          cellsToUpdate: [],
           block: block.current,
           position: position.current,
           gameStatus: castToGameStatus(gameStatus.current),
@@ -436,6 +446,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
                 ? {
                     board: movementResult.board,
                     boardCellElements: currentState.boardCellElements,
+                    cellsToUpdate: movementResult.cellsToUpdate,
                     block: movementResult.block,
                     position: movementResult.position,
                     gameStatus: movementResult.gameStatus,
@@ -454,6 +465,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
                 ? {
                     board: movementResult.board,
                     boardCellElements: currentState.boardCellElements,
+                    cellsToUpdate: movementResult.cellsToUpdate,
                     block: movementResult.block,
                     position: movementResult.position,
                     gameStatus: movementResult.gameStatus,

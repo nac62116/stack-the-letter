@@ -125,7 +125,7 @@ export function getReadableBlocks(options: {
   return streamOfBlocks;
 }
 
-function transformTextToBlock(text: string): Block {
+export function transformTextToBlock(text: string): Block {
   let block = EMPTY_BLOCK;
   const letters = text.split("");
   // seperator between words but not for the first word
