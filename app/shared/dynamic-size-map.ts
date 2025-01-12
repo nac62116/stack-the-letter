@@ -2031,3 +2031,5 @@ export const height = [
   "h-[719px]",
   "h-[720px]",
 ] as const;
+
+export const gap = ["gap-[0px]", "gap-[1px]", "gap-[2px]"] as const;

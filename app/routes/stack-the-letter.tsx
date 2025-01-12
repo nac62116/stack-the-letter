@@ -1,7 +1,6 @@
 import type { Route } from "./+types/stack-the-letter";
 import {
   getBoard,
-  getReadableBlocks,
   transformTextToBlock,
   type Board,
 } from "~/shared/stack-the-letter-builder";
@@ -24,7 +23,7 @@ import {
   Board as BoardComponent,
   Cell,
 } from "~/components/Board";
-import { BLOCK_HEIGHT, DEFAULT_BLOCK, type Block } from "~/shared/alphabet";
+import { BLOCK_HEIGHT, type Block } from "~/shared/alphabet";
 import {
   CELL_GAP,
   CELL_HEIGHT,
@@ -53,7 +52,7 @@ export async function loader({}: Route.LoaderArgs) {
   // FEATURE: New setting: Let user choose their own color palette
   const author = "Colin";
   const letter = {
-    headline: "Hi i bims der Colin.",
+    headline: "Oh, hi i bims der Colin.",
     message:
       "Was geht so bei dir? Ich hoffe du hast einen guten Tag. Hier eine kleine Nachricht von mir, verpackt in einem Spiel. Viel Spaß bei Stack The Letter :)",
     regards: "Liebe Grüße, Colin",
@@ -311,8 +310,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
               }
               startGame();
             } else {
-              // TODO: Make this visible to the user -> Toast?
-              console.log("Board not yet loaded");
+              console.error("Game loop started without loaded board");
             }
           }
         }
@@ -368,13 +366,10 @@ export default function Home({ loaderData }: Route.ComponentProps) {
   // -> see https://developer.mozilla.org/en-US/docs/Web/API/Window/requestAnimationFrame)
   const startGame = () => {
     // Render cycle
-    // -> Cycle frequency is Matching the screen refresh rate
+    // -> Cycle frequency is approximately Matching the screen refresh rate
     const step: FrameRequestCallback = (timestamp) => {
-      console.time("Step: ");
       // Early return if game status is not running
       if (gameStatus.current !== "running") {
-        console.timeEnd("Step: ");
-        console.log("Early return caused by gameStatus.current !== running");
         return;
       }
       // Early return if board and all refs that depend on it are not yet loaded
@@ -391,14 +386,15 @@ export default function Home({ loaderData }: Route.ComponentProps) {
             : DOWN_MOVEMENT_SPEED;
         const isTimeToMoveDown = timestamp - lastDownMove.current >= speed;
         const isTimeToMoveSidewards =
-          timestamp - lastSideMove.current >= SIDE_MOVEMENT_SPEED;
+          timestamp - lastSideMove.current >= SIDE_MOVEMENT_SPEED &&
+          // Not moving when both left and right are pressed
+          (left.current === true && right.current === true) === false;
         // Early return to save resources if no movement is happening
         if (
           isTimeToMoveDown === false &&
           left.current === false &&
           right.current === false
         ) {
-          console.timeEnd("Step: ");
           window.requestAnimationFrame(step);
           return;
         }
@@ -421,61 +417,45 @@ export default function Home({ loaderData }: Route.ComponentProps) {
         const statesToUpdate: (() => void)[] = [];
         let nextStep = false;
 
-        // Moving current block down with the frequency defined in isTimeToMoveDown variable
+        // TODO: Rotating the current block
         if (isTimeToMoveDown) {
-          console.time("moveBlock down: ");
-          statesToUpdate.push(() => {
-            setLastDownMove(timestamp);
-          });
-          movementResult = moveBlock("down", currentState);
-          console.timeEnd("moveBlock down: ");
-        }
-        // Not moving when both left and right are pressed
-        if (
-          isTimeToMoveSidewards &&
-          (left.current === true && right.current === true) === false
-        ) {
-          // TODO: Rotating the current block at any frame in the render cycle
-          // Moving current block to the left at any frame in the render cycle
-          if (left.current === true) {
-            console.time("moveBlock left: ");
-            statesToUpdate.push(() => setLastSideMove(timestamp));
-            movementResult = moveBlock(
-              "left",
-              movementResult !== undefined
-                ? {
-                    board: movementResult.board,
-                    boardCellElements: currentState.boardCellElements,
-                    cellsToUpdate: movementResult.cellsToUpdate,
-                    block: movementResult.block,
-                    position: movementResult.position,
-                    gameStatus: movementResult.gameStatus,
-                  }
-                : currentState
-            );
-            console.timeEnd("moveBlock left: ");
+          // Moving current block diagonally if it also wants to move left or right
+          if (
+            isTimeToMoveSidewards &&
+            (left.current === true || right.current === true)
+          ) {
+            if (left.current === true) {
+              statesToUpdate.push(() => setLastSideMove(timestamp));
+              statesToUpdate.push(() => setLastDownMove(timestamp));
+              movementResult = moveBlock("diagonal-left", currentState);
+            }
+            if (right.current === true) {
+              statesToUpdate.push(() => setLastSideMove(timestamp));
+              statesToUpdate.push(() => setLastDownMove(timestamp));
+              movementResult = moveBlock("diagonal-right", currentState);
+            }
+          } else {
+            // Moving current block down
+            statesToUpdate.push(() => setLastDownMove(timestamp));
+            movementResult = moveBlock("down", currentState);
           }
-          // Moving current block to the right at any frame in the render cycle
-          if (right.current === true) {
-            console.time("moveBlock right: ");
-            statesToUpdate.push(() => setLastSideMove(timestamp));
-            movementResult = moveBlock(
-              "right",
-              movementResult !== undefined
-                ? {
-                    board: movementResult.board,
-                    boardCellElements: currentState.boardCellElements,
-                    cellsToUpdate: movementResult.cellsToUpdate,
-                    block: movementResult.block,
-                    position: movementResult.position,
-                    gameStatus: movementResult.gameStatus,
-                  }
-                : currentState
-            );
-            console.timeEnd("moveBlock right: ");
+        } else {
+          if (
+            isTimeToMoveSidewards &&
+            (left.current === true || right.current === true)
+          ) {
+            if (left.current === true) {
+              // Moving current block to the left
+              statesToUpdate.push(() => setLastSideMove(timestamp));
+              movementResult = moveBlock("left", currentState);
+            }
+            // Moving current block to the right
+            if (right.current === true) {
+              statesToUpdate.push(() => setLastSideMove(timestamp));
+              movementResult = moveBlock("right", currentState);
+            }
           }
         }
-        console.time("Gather state updates: ");
         // Checking if any movement did happen in this frame of the render cycle
         if (movementResult !== undefined) {
           // Update the board state
@@ -531,14 +511,10 @@ export default function Home({ loaderData }: Route.ComponentProps) {
           // But request the next step to keep the game running
           nextStep = true;
         }
-        console.timeEnd("Gather state updates: ");
-        console.time("Batched updates: ");
         // Batched updates
         for (let stateUpdate of statesToUpdate) {
           stateUpdate();
         }
-        console.timeEnd("Batched updates: ");
-        console.time("Batched rerendering: ");
         // Batched rerendering of the board
         if (movementResult !== undefined) {
           for (let cell of movementResult.cellsToUpdate) {
@@ -548,8 +524,6 @@ export default function Home({ loaderData }: Route.ComponentProps) {
             }
           }
         }
-        console.timeEnd("Batched rerendering: ");
-        console.timeEnd("Step: ");
         if (nextStep) {
           window.requestAnimationFrame(step);
         }

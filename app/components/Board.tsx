@@ -4,7 +4,7 @@ import {
   FALLBACK_CELL_COLOR,
 } from "~/shared/dynamic-cell-color-map";
 import { gridCols, gridRows } from "~/shared/dynamic-grid-map";
-import { height, width } from "~/shared/dynamic-size-map";
+import { gap, height, width } from "~/shared/dynamic-size-map";
 import {
   MAX_BOARD_HEIGHT,
   MAX_BOARD_WIDTH,
@@ -33,9 +33,9 @@ import {
  */
 
 export const CELL_BASE_CLASS_NAME = "rounded-sm";
-export const CELL_WIDTH_CLASS_NAME = "w-1";
-export const CELL_HEIGHT_CLASS_NAME = "h-1";
-const CELL_GAP_CLASS_NAME = "gap-[2px]";
+export const CELL_WIDTH_CLASS_NAME = width[CELL_WIDTH];
+export const CELL_HEIGHT_CLASS_NAME = height[CELL_HEIGHT];
+const CELL_GAP_CLASS_NAME = gap[CELL_GAP];
 
 export function Board(props: {
   id: string;

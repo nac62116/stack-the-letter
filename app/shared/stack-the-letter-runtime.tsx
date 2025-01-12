@@ -10,7 +10,12 @@ import {
 } from "~/shared/dynamic-cell-color-map";
 import type { Board } from "./stack-the-letter-builder";
 
-type MovementDirection = "left" | "right" | "down";
+type MovementDirection =
+  | "left"
+  | "right"
+  | "down"
+  | "diagonal-right"
+  | "diagonal-left";
 export type BoardCellElements = (Element | null)[][];
 export type Position = { x: number; y: number };
 export type GameStatus =
@@ -59,101 +64,148 @@ export function moveBlock(
       cellsToUpdate: [] as CellsToUpdate,
     };
   }
-
   const currentPosition = {
     x: position.x,
     y: position.y,
   };
-  console.time("Init currentBoard: ");
   const currentBoard = board.map((row) => row.slice());
-  console.timeEnd("Init currentBoard: ");
-  console.time("Init newBlock: ");
-  let cellBelowLastActiveCellOfColumn: number | undefined;
-  const currentBlock = block.map((row, rowIndex) =>
-    row.map((cell, columnIndex) => {
-      if (rowIndex === 0) {
-        // TODO: Calculate real last active cell of column
-        let lastActiveCell;
-        const rowAtLastActiveCellOfColumnIndex = block.findIndex(
-          (tempRow) => tempRow[columnIndex] === 0
-        );
-        let rowBelowLastActiveCellOfColumnIndex;
-        if (rowAtLastActiveCellOfColumnIndex === -1) {
-          rowBelowLastActiveCellOfColumnIndex = position.y + block.length;
-        } else {
-          rowBelowLastActiveCellOfColumnIndex =
-            position.y + rowAtLastActiveCellOfColumnIndex + 1;
-        }
-        cellBelowLastActiveCellOfColumn =
-          currentBoard[rowBelowLastActiveCellOfColumnIndex] !== undefined &&
-          currentBoard[rowBelowLastActiveCellOfColumnIndex][columnIndex] !==
-            undefined
-            ? currentBoard[rowBelowLastActiveCellOfColumnIndex][columnIndex]
-            : undefined;
+  let isGameOver = false;
+  const currentBlock = block.map((row, rowIndex) => {
+    if (isGameOver === true) {
+      return row.slice();
+    }
+    return row.map((cell, columnIndex) => {
+      const lastActiveCellRowIndex = block.findLastIndex(
+        (tmpRow) => tmpRow[columnIndex] !== 0
+      );
+      // When cell below the last active cell on current board is not 0 current column is colliding
+      const boardCellBelowLastActiveBlockCell =
+        currentBoard[position.y + lastActiveCellRowIndex + 1] !== undefined &&
+        currentBoard[position.y + lastActiveCellRowIndex + 1][
+          position.x + columnIndex
+        ] !== undefined
+          ? currentBoard[position.y + lastActiveCellRowIndex + 1][
+              position.x + columnIndex
+            ]
+          : undefined;
+      const isColliding = boardCellBelowLastActiveBlockCell !== 0;
+      if (isColliding === false) {
+        // Column of current cell is not colliding, just return the original cell
+        return cell;
+      }
+      if (lastActiveCellRowIndex === -1) {
+        // No more active cells in column, just return the current block cell which will be 0
+        return cell;
+      }
+      // Check if first active cell is above the board
+      // If so, game over
+      const firstActiveCellRowIndex = block.findIndex(
+        (tmpRow) => tmpRow[columnIndex] !== 0
+      );
+      if (firstActiveCellRowIndex === -1) {
+        // No active cells in column, just return the current block cell which will be 0
+        return cell;
+      }
+      if (position.y + firstActiveCellRowIndex < block.length) {
+        isGameOver = true;
+        return cell;
       }
 
-      // const cellBelowLastActiveCellOfColumn =
-      //   currentBoard[currentPosition.y + block.length][columnIndex];
-      if (cellBelowLastActiveCellOfColumn !== 0) {
-        // Current column reached bottom boundary or other block
-        // -> return 0 to remove the current cell from the block
+      const lastInactiveCellBeforeActiveCellRowIndex = block.findLastIndex(
+        (tmpRow, tmpRowIndex) =>
+          lastActiveCellRowIndex !== undefined &&
+          tmpRowIndex < lastActiveCellRowIndex &&
+          tmpRow[columnIndex] === 0
+      );
+      if (lastInactiveCellBeforeActiveCellRowIndex === -1) {
+        // There is an active cell in the column, but all cells above are active as well
+        // Which means the current cell we are looking on is also active
+        // Because we are colliding (isColliding === true) we need to remove the current cell
         return 0;
       }
-      // Current column can move downwards without collision and can therefore stay in the block
+      // There is an active cell in the column and there is at least one inactive cell above
+      // If you are below this inactive cell you are colliding and need to be removed
+      if (rowIndex > lastInactiveCellBeforeActiveCellRowIndex) {
+        return 0;
+      }
+      // Else return your current value
       return cell;
-    })
-  );
-  console.timeEnd("Init newBlock: ");
-  console.time("Check if block is empty: ");
+    });
+  });
+  if ((isGameOver as boolean) === true) {
+    return {
+      board,
+      cellsToUpdate: [] as CellsToUpdate,
+      block,
+      position,
+      gameStatus: castToGameStatus("gameOver"),
+    };
+  }
   // Early return when block is empty
   const isBlockEmpty = currentBlock.every((row) =>
     row.every((cell) => {
       return cell === 0;
     })
   );
-  console.timeEnd("Check if block is empty: ");
   if (isBlockEmpty === true) {
-    if (currentPosition.y < currentBlock.length) {
-      // Block is above the board -> game over
-      return {
-        board,
-        cellsToUpdate: [] as CellsToUpdate,
-        block,
-        position,
-        gameStatus: castToGameStatus("gameOver"),
-      };
-    } else {
-      return {
-        board,
-        cellsToUpdate: [] as CellsToUpdate,
-        block,
-        position,
-        gameStatus: castToGameStatus("nextBlockPlease"),
-      };
-    }
+    return {
+      board,
+      cellsToUpdate: [] as CellsToUpdate,
+      block,
+      position,
+      gameStatus: castToGameStatus("nextBlockPlease"),
+    };
   }
-  // Early return when lateral movement is requested but not possible
-  if (direction === "left" || direction === "right") {
+
+  // Early return or change of direction when lateral movement is requested but not possible
+  let newDirection = direction;
+  if (
+    newDirection === "left" ||
+    newDirection === "right" ||
+    newDirection === "diagonal-left" ||
+    newDirection === "diagonal-right"
+  ) {
     // When any cell of block that has a neighbor inside the block
     // That is either inactive (0) or out of bounds (undefined)
     // Has a neighbor on newBoard that is not inactive (0)
     // Then the block can't move left|right
     // -> return gameState "running", the original board, the original block and the original position
-    console.time("Check if block can move sideways: ");
     const canMoveSidewards = currentBlock.every((row, rowIndex) =>
       row.every((_cell, columnIndex) => {
         const blockNeighbor =
-          currentBlock[rowIndex] !== undefined
-            ? currentBlock[rowIndex][
-                direction === "left" ? columnIndex - 1 : columnIndex + 1
+          currentBlock[
+            newDirection === "diagonal-left" ||
+            newDirection === "diagonal-right"
+              ? rowIndex + 1
+              : rowIndex
+          ] !== undefined
+            ? currentBlock[
+                newDirection === "diagonal-left" ||
+                newDirection === "diagonal-right"
+                  ? rowIndex + 1
+                  : rowIndex
+              ][
+                newDirection === "left" || newDirection === "diagonal-left"
+                  ? columnIndex - 1
+                  : columnIndex + 1
               ]
             : undefined;
         const boardNeighbor =
-          currentBoard[rowIndex + currentPosition.y] !== undefined
-            ? currentBoard[rowIndex + currentPosition.y][
-                direction === "left"
-                  ? columnIndex + currentPosition.x - 1
-                  : columnIndex + currentPosition.x + 1
+          currentBoard[
+            newDirection === "diagonal-left" ||
+            newDirection === "diagonal-right"
+              ? currentPosition.y + rowIndex + 1
+              : currentPosition.y + rowIndex
+          ] !== undefined
+            ? currentBoard[
+                newDirection === "diagonal-left" ||
+                newDirection === "diagonal-right"
+                  ? currentPosition.y + rowIndex + 1
+                  : currentPosition.y + rowIndex
+              ][
+                newDirection === "left" || newDirection === "diagonal-left"
+                  ? currentPosition.x + columnIndex - 1
+                  : currentPosition.x + columnIndex + 1
               ]
             : undefined;
         // There is a block neighbor
@@ -168,138 +220,108 @@ export function moveBlock(
         }
       })
     );
-    console.timeEnd("Check if block can move sideways: ");
     if (canMoveSidewards === false) {
-      return {
-        board,
-        cellsToUpdate: [] as CellsToUpdate,
-        block,
-        position,
-        gameStatus: castToGameStatus("running"),
-      };
+      if (
+        newDirection !== "diagonal-left" &&
+        newDirection !== "diagonal-right"
+      ) {
+        return {
+          board,
+          cellsToUpdate: [] as CellsToUpdate,
+          block,
+          position,
+          gameStatus: castToGameStatus("running"),
+        };
+      } else {
+        newDirection = "down";
+      }
     }
   }
-  const newPosition = {
-    x:
-      direction === "left"
-        ? currentPosition.x - 1
-        : direction === "right"
-        ? currentPosition.x + 1
-        : currentPosition.x,
-    y: direction === "down" ? currentPosition.y + 1 : currentPosition.y,
-  };
 
   // At this point we can guarantee
   // that the block can move in every direction without collision.
-  // (see above early returns);
+  // (see above early returns and block cell removal due to collision);
   // Therefore we can calculate the new board cells
-
-  // const boardWithoutBlock = ... -> remove currentBlock from board
-  // const newBoard = ... -> add next block (meaning react to all cells between newPosition.y and newPosition.y + block.length - 1 and newPosition.x and newPosition.x + block[0].length - 1)
-
-  console.time("Calculate new board cells: ");
-
-  const newBoard = currentBoard.map((row, rowIndex) =>
+  const newPosition = {
+    x:
+      newDirection === "left" || newDirection === "diagonal-left"
+        ? currentPosition.x - 1
+        : newDirection === "right" || newDirection === "diagonal-right"
+        ? currentPosition.x + 1
+        : currentPosition.x,
+    y:
+      newDirection === "down" ||
+      newDirection === "diagonal-left" ||
+      newDirection === "diagonal-right"
+        ? currentPosition.y + 1
+        : currentPosition.y,
+  };
+  const boardWithoutBlock = currentBoard.map((row, rowIndex) =>
     row.map((cell, columnIndex) => {
-      const correspondingBlockCell =
-        currentBlock[rowIndex - currentPosition.y] !== undefined &&
-        currentBlock[rowIndex - currentPosition.y][
-          columnIndex - currentPosition.x
-        ] !== undefined
-          ? currentBlock[rowIndex - currentPosition.y][
-              columnIndex - currentPosition.x
-            ]
-          : undefined;
-      const yDelta = direction === "down" ? -1 : 0;
-      const xDelta = direction === "left" ? 1 : direction === "right" ? -1 : 0;
-      const correspondingBlockCellNeighbor =
-        currentBlock[rowIndex - currentPosition.y + yDelta] !== undefined &&
-        currentBlock[rowIndex - currentPosition.y + yDelta][
-          columnIndex - currentPosition.x + xDelta
-        ] !== undefined
-          ? currentBlock[rowIndex - currentPosition.y + yDelta][
-              columnIndex - currentPosition.x + xDelta
-            ]
-          : undefined;
-
-      if (correspondingBlockCell === undefined) {
-        // We are anywhere outside the block
-        // If right neighbor (on left move) is on the block
-        // -> return the value of right neighbor
-        // Else we are on a cell that is not involved in movement
-        // -> return the value of the cell
-        if (correspondingBlockCellNeighbor !== undefined) {
-          return correspondingBlockCellNeighbor;
-        } else {
-          return cell;
-        }
-      } else {
-        // We are inside the block
-        // If right neighbor (on left move) is on the block
-        // -> return the value of right neighbor
-        // Else we are on a cell where the currentBlock was before and now has moved away
-        // -> return 0
-        if (correspondingBlockCellNeighbor !== undefined) {
-          return correspondingBlockCellNeighbor;
-        } else {
+      if (
+        rowIndex >= currentPosition.y &&
+        rowIndex < currentPosition.y + currentBlock.length &&
+        columnIndex >= currentPosition.x &&
+        columnIndex < currentPosition.x + currentBlock[0].length
+      ) {
+        const currentCell =
+          currentBlock[rowIndex - currentPosition.y] !== undefined &&
+          currentBlock[rowIndex - currentPosition.y][
+            columnIndex - currentPosition.x
+          ] !== undefined
+            ? currentBlock[rowIndex - currentPosition.y][
+                columnIndex - currentPosition.x
+              ]
+            : undefined;
+        if (currentCell !== 0 && currentCell !== undefined) {
           return 0;
         }
       }
+      return cell;
     })
   );
-
-  // const newBoard = currentBoard.map((row, rowIndex) =>
-  //   row.map((cell, columnIndex) => {
-  //     const yDelta = direction === "down" ? -1 : 0;
-  //     const xDelta = direction === "left" ? 1 : direction === "right" ? -1 : 0;
-  //     const neighborBoardCellOnBlock =
-  //       newBlock[rowIndex - currentPosition.y + yDelta] !== undefined &&
-  //       newBlock[rowIndex - currentPosition.y + yDelta][
-  //         columnIndex - currentPosition.x + xDelta
-  //       ] !== undefined
-  //         ? newBlock[rowIndex - currentPosition.y + yDelta][
-  //             columnIndex - currentPosition.x + xDelta
-  //           ]
-  //         : undefined;
-  //     if (neighborBoardCellOnBlock !== undefined) {
-  //       return neighborBoardCellOnBlock;
-  //     }
-  //     const currentBoardCellOnBlock =
-  //       newBlock[rowIndex] !== undefined &&
-  //       newBlock[rowIndex][columnIndex] !== undefined
-  //         ? newBlock[rowIndex][columnIndex]
-  //         : undefined;
-  //     if (currentBoardCellOnBlock !== undefined) {
-  //       return 0;
-  //     }
-  //     return cell;
-  //   })
-  // );
-  console.timeEnd("Calculate new board cells: ");
-  console.time("Gather cell elements to update: ");
-  // Check which cells changed and need therefore to be updated
-  // TODO:
-  // 1. Go through newBlock and return corresponding active board cell elements
-  // -> newBlock means iterating on the board and reacting to cells between
-  // newPositon.y and newPosition.y + block.length - 1 and newPosition.x
-  // and newPosition.x + block[0].length - 1
-  // 2. Go through top/left/right row of currentBlock and return corresponding inactive board cell elements
-  // -> currentBlock means iterating on the board and reacting to cells between
-  // currentPosition.y and currentPosition.y + block.length - 1 and currentPosition.x
-  // and currentPosition.x + block[0].length - 1
-  const currentBoardCellElements = boardCellElements.map((row) => row.slice());
-  const newCellsToUpdate = newBoard
+  const newBoard = boardWithoutBlock.map((row, rowIndex) =>
+    row.map((cell, columnIndex) => {
+      if (
+        rowIndex >= newPosition.y &&
+        rowIndex < newPosition.y + currentBlock.length &&
+        columnIndex >= newPosition.x &&
+        columnIndex < newPosition.x + currentBlock[0].length
+      ) {
+        const currentCell =
+          currentBlock[rowIndex - newPosition.y] !== undefined &&
+          currentBlock[rowIndex - newPosition.y][
+            columnIndex - newPosition.x
+          ] !== undefined
+            ? currentBlock[rowIndex - newPosition.y][
+                columnIndex - newPosition.x
+              ]
+            : undefined;
+        if (currentCell !== 0 && currentCell !== undefined) {
+          return currentBlock[rowIndex - newPosition.y][
+            columnIndex - newPosition.x
+          ];
+        }
+      }
+      return cell;
+    })
+  );
+  const newCellsToUpdate = boardCellElements
     .map((row, rowIndex) =>
-      row.map((cell, columnIndex) => {
-        // if we are above the rendered board
-        if (rowIndex < currentBlock.length) {
+      row.map((cellElement, columnIndex) => {
+        // The top $BLOCK_HEIGHT rows are not rendered and just used for dropping the block
+        // Their corresponding elements on boardCellElements are null
+        if (cellElement === null) {
           return {
             element: null,
             className: "",
           };
         }
-        // if newBoard cell is the same as the currentBoard cell value
-        if (cell === currentBoard[rowIndex][columnIndex]) {
+        // if newBoard cell is the same as the currentBoard cell value -> no need to update
+        if (
+          newBoard[rowIndex][columnIndex] ===
+          currentBoard[rowIndex][columnIndex]
+        ) {
           return {
             element: null,
             className: "",
@@ -307,15 +329,14 @@ export function moveBlock(
         }
         // Add new board cell to cellsToUpdate
         return {
-          element: currentBoardCellElements[rowIndex][columnIndex],
+          element: cellElement,
           className: `${
-            cellColors[cell] || FALLBACK_CELL_COLOR
+            cellColors[newBoard[rowIndex][columnIndex]] || FALLBACK_CELL_COLOR
           } ${CELL_WIDTH_CLASS_NAME} ${CELL_HEIGHT_CLASS_NAME} ${CELL_BASE_CLASS_NAME}`,
         };
       })
     )
     .flat();
-  console.timeEnd("Gather cell elements to update: ");
 
   const typedBlock = castToBlock(currentBlock, block);
   return {
