@@ -2,7 +2,6 @@ import type { Route } from "./+types/stack-the-letter";
 import {
   getBoard,
   getReadableBlocks,
-  transformTextToBlock,
   type Board,
 } from "~/shared/stack-the-letter-builder";
 import React from "react";
@@ -35,6 +34,7 @@ import {
   MIN_BOARD_ROWS,
 } from "~/shared/stack-the-letter-builder";
 import { cellColors } from "~/shared/dynamic-cell-color-map";
+import { Letter } from "~/components/Letter";
 
 export function meta({
   data: {
@@ -53,7 +53,7 @@ export async function loader({}: Route.LoaderArgs) {
   // FEATURE: New setting: Let user choose their own color palette
   const author = "Colin";
   const letter = {
-    salutation: "Ganz ganz ganz ganz Liebe Ronja,",
+    salutation: "Ganz :) ;-) - ganz: ganz ganz Liebe Ronja,",
     message:
       "Was geht so bei dir? Ich hoffe du hast einen guten Tag. Hier eine kleine Nachricht von mir, verpackt in einem Spiel. Viel Spaß bei Stack The Letter :)",
     regards: "Liebe Grüße, Colin",
@@ -65,7 +65,7 @@ export async function loader({}: Route.LoaderArgs) {
   } as const;
 }
 
-export default function Home({ loaderData }: Route.ComponentProps) {
+export default function StackTheLetter({ loaderData }: Route.ComponentProps) {
   const { author, letter } = loaderData;
 
   const initialSetup: {
@@ -543,33 +543,57 @@ export default function Home({ loaderData }: Route.ComponentProps) {
 
   return (
     <div className="relative w-full grid grid-cols-1 justify-center text-center gap-4 select-none">
-      {/* TODO: Styling */}
       {/* TODO: Mobile controls */}
       <div id="header-placeholder" className="w-full h-8" />
-      <div className="grid grid-cols-1 justify-center text-center gap-4">
-        {gameStatus.current === "idle" ? (
-          <>
-            <p>{author} wrote you a letter.</p>
-            <p>But the letter is scrambled into blocks...</p>
-            <p>Press Enter to take a look at it.</p>
-          </>
-        ) : gameStatus.current === "youWon" ? (
-          <>
-            <h1>You got it!</h1>
-            <p>Here is the full letter from {author}</p>
-            <h2>{letter.salutation}</h2>
-            <p>{letter.message}</p>
-            <p>{letter.regards}</p>
-            <p>Press Enter to try again.</p>
-          </>
-        ) : gameStatus.current === "gameOver" ? (
-          <>
-            <h1>Cliff hanger</h1>
-            <p>Your blocks are stacked to the top.</p>
-            <p>But the letter wasn't finished yet.</p>
-            <p>Press Enter to try again.</p>
-          </>
+      <div className="grid grid-cols-1 justify-center">
+        {gameStatus.current === "idle" ||
+        gameStatus.current === "gameOver" ||
+        gameStatus.current === "youWon" ? (
+          <div className="w-full flex justify-center">
+            <div className="py-8 max-w-[376px] flex flex-col gap-2 sm:border sm:border-gray-600 p-4 rounded-xl">
+              {gameStatus.current === "idle" ? (
+                <>
+                  <h2 className="bold text-2xl mb-4">
+                    {author} wrote you a letter.
+                  </h2>
+                  <p>
+                    If you want to read it,
+                    <br />
+                    you have to play a game of "Stack the Letter".
+                  </p>
+                  {boardLoaded.current === false ? (
+                    <p>Please wait until the game finished loading...</p>
+                  ) : (
+                    <p>Press Enter to take a look at it.</p>
+                  )}
+                  <noscript>
+                    <p>
+                      Sorry, you need to enable JavaScript
+                      <br />
+                      to play this game.
+                    </p>
+                    <p>But you can still read the letter if you want.</p>
+                    <Letter letter={letter} boardLoaded={boardLoaded.current} />
+                  </noscript>
+                </>
+              ) : gameStatus.current === "youWon" ? (
+                <>
+                  <h2 className="bold text-2xl mb-4">You got it!</h2>
+                  <p>Here is the full letter from {author}.</p>
+                  <Letter letter={letter} boardLoaded={boardLoaded.current} />
+                </>
+              ) : (
+                <>
+                  <h2 className="bold text-2xl mb-4">Cliff hanger</h2>
+                  <p>Your blocks are stacked to the top.</p>
+                  <p>But the letter wasn't finished yet.</p>
+                  <p>Press Enter to try again.</p>
+                </>
+              )}
+            </div>
+          </div>
         ) : null}
+
         {setup.current.board !== undefined ? (
           <div
             ref={boardElement}
@@ -599,11 +623,11 @@ export default function Home({ loaderData }: Route.ComponentProps) {
       <header className="absolute top-0 w-full h-8 pb-1 flex justify-between items-center gap-4 px-4 bg-gradient-to-r from-emerald-950 from-1% via-transparent via-50% to-emerald-950 to-99%">
         <h1 className="text-nowrap">
           Stack The Letter
-          {boardLoaded.current === false ? " - Board loading..." : ""}
+          {boardLoaded.current === false ? " - Loading..." : ""}
         </h1>
         <nav className="w-full flex justify-end">
           <div className="flex items-center group">
-            <div className="absolute h-screen inset-0 bg-emerald-950 bg-opacity-20 group-has-[:checked]:flex hidden justify-center items-center">
+            <div className="absolute h-dvh inset-0 bg-emerald-950 bg-opacity-70 group-has-[:checked]:flex hidden justify-center items-center">
               <section className="flex flex-col gap-2 border border-gray-600 bg-black p-4 rounded-xl">
                 <h2 className="text-2xl text-start">How to play?</h2>
                 <ul className="text-left">
