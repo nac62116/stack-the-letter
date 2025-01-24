@@ -37,7 +37,7 @@ export const MIN_BOARD_COLUMNS =
 export const MAX_BOARD_ROWS =
   (MAX_BOARD_HEIGHT + BLOCK_HEIGHT + CELL_GAP) / (CELL_HEIGHT + CELL_GAP);
 export const MIN_BOARD_ROWS = 3 * BLOCK_HEIGHT;
-const PADDING_X_BOARD_COLUMNS = 20;
+const COLUMN_PADDING_X_RELATIVE_TO_SCREEN_WIDTH_FACTOR = 0.02;
 
 export function getBoard(columns: number, rows: number): Board {
   const board: Board = [
@@ -48,80 +48,78 @@ export function getBoard(columns: number, rows: number): Board {
   return board;
 }
 
-// TODO: Implement this function
 export function getReadableBlocks(options: {
   letter: {
-    headline: string;
+    salutation: string;
     message: string;
     regards: string;
   };
   columns: number;
+  screenWidth: number;
 }) {
-  const { letter, columns } = options;
+  const { letter, columns, screenWidth } = options;
   const streamOfBlocks: Block[] = [];
-  const letterInWords = {
-    headline: letter.headline.toLowerCase().split(" "),
-    message: letter.message.toLowerCase().split(" "),
-    regards: letter.regards.toLowerCase().split(" "),
-  };
-  let lastLongestSentence = "";
-  let possiblyLongestSentence = "";
-  let wordIndex = 0;
-  for (const word of letterInWords.headline) {
-    if (possiblyLongestSentence === "") {
-      possiblyLongestSentence = word;
-      continue;
-    }
-    const lastBlock = transformTextToBlock(lastLongestSentence);
-    const block = transformTextToBlock(possiblyLongestSentence);
-    if (block[0].length > columns - 2 * PADDING_X_BOARD_COLUMNS) {
-      if (lastBlock[0].length > columns - 2 * PADDING_X_BOARD_COLUMNS) {
-        // FEATURE: Split on syllables
-        const firstPartOfWord = `${lastLongestSentence.substring(
-          0,
-          Math.floor(lastLongestSentence.length / 2)
-        )}-`;
-        const secondPartOfWord = lastLongestSentence.substring(
-          Math.floor(lastLongestSentence.length / 2)
-        );
-        const firstBlock = transformTextToBlock(firstPartOfWord);
-        const secondBlock = transformTextToBlock(secondPartOfWord);
-        if (
-          firstBlock[0].length > columns - 2 * PADDING_X_BOARD_COLUMNS ||
-          secondBlock[0].length > columns - 2 * PADDING_X_BOARD_COLUMNS
-        ) {
-          console.error(
-            `First part of word '${firstPartOfWord}' is too long for board. The whole word ${lastLongestSentence} will be left out.`
-          );
-          lastLongestSentence = "";
-          possiblyLongestSentence = word;
-        } else {
-          streamOfBlocks.push(firstBlock);
-          streamOfBlocks.push(secondBlock);
-          lastLongestSentence = "";
-          possiblyLongestSentence = word;
+  const paddingX = Math.floor(
+    screenWidth * COLUMN_PADDING_X_RELATIVE_TO_SCREEN_WIDTH_FACTOR
+  );
+
+  for (const letterPart in letter) {
+    const typedLetterPart = letterPart as keyof typeof letter;
+    let letterPartToProcess = letter[typedLetterPart].toLowerCase().trim();
+    while (letterPartToProcess.length > 0) {
+      let cutIndex = 1;
+      let nextLine = letterPartToProcess.substring(0, cutIndex).trim();
+      let block = transformTextToBlock(nextLine);
+      while (
+        block[0].length <= columns - 2 * paddingX &&
+        cutIndex - 1 < letterPartToProcess.length
+      ) {
+        if (nextLine.search(/[.,:;?!] /) !== -1) {
+          nextLine = letterPartToProcess.substring(0, cutIndex - 2);
+          block = transformTextToBlock(nextLine);
+          break;
         }
-      } else {
-        streamOfBlocks.push(lastBlock);
-        lastLongestSentence = "";
-        possiblyLongestSentence = word;
+        nextLine = letterPartToProcess.substring(0, cutIndex);
+        const tmpBlock = transformTextToBlock(nextLine);
+        if (tmpBlock[0].length > columns - 2 * paddingX) {
+          nextLine = letterPartToProcess.substring(0, cutIndex);
+          if (nextLine.lastIndexOf(" ") !== -1) {
+            nextLine = nextLine.substring(0, nextLine.lastIndexOf(" "));
+            block = transformTextToBlock(nextLine);
+          } else {
+            let hyphenatedLine;
+            const letterAfterCut = letterPartToProcess.at(cutIndex);
+            if (
+              letterAfterCut !== undefined &&
+              letterAfterCut.search(/[ .,:;?!]/) === -1
+            ) {
+              // FEATURE: Split on syllables
+              hyphenatedLine = `${nextLine}-`;
+            } else {
+              if (
+                letterAfterCut !== undefined &&
+                letterAfterCut.search(/[.,:;?!]/) !== -1
+              ) {
+                hyphenatedLine = `${nextLine}${letterAfterCut}`;
+                nextLine = hyphenatedLine;
+              } else {
+                hyphenatedLine = nextLine;
+              }
+            }
+            block = transformTextToBlock(hyphenatedLine);
+          }
+          break;
+        }
+        cutIndex++;
+        block = tmpBlock;
       }
-    } else {
-      lastLongestSentence = possiblyLongestSentence;
-      if (wordIndex !== 0) {
-        possiblyLongestSentence = `${possiblyLongestSentence} ${word}`;
-      }
-      if (wordIndex === letterInWords.headline.length - 1) {
-        const longestPossibleBlock = transformTextToBlock(
-          possiblyLongestSentence
-        );
-        streamOfBlocks.push(longestPossibleBlock);
-      }
+      streamOfBlocks.push(block);
+      letterPartToProcess = letterPartToProcess
+        .substring(nextLine.length)
+        .trim();
     }
-    wordIndex++;
   }
-  // TODO: Same with message and regards
-  // maybe add a break into the else statement when there are .,- or other seperators?
+
   return streamOfBlocks;
 }
 

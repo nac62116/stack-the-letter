@@ -1,6 +1,7 @@
 import type { Route } from "./+types/stack-the-letter";
 import {
   getBoard,
+  getReadableBlocks,
   transformTextToBlock,
   type Board,
 } from "~/shared/stack-the-letter-builder";
@@ -38,7 +39,7 @@ import { cellColors } from "~/shared/dynamic-cell-color-map";
 export function meta({
   data: {
     author,
-    letter: { headline },
+    letter: { salutation: headline },
   },
 }: Route.MetaArgs) {
   return [
@@ -52,7 +53,7 @@ export async function loader({}: Route.LoaderArgs) {
   // FEATURE: New setting: Let user choose their own color palette
   const author = "Colin";
   const letter = {
-    headline: "Oh, hi i bims der Colin.",
+    salutation: "Ganz ganz ganz ganz Liebe Ronja,",
     message:
       "Was geht so bei dir? Ich hoffe du hast einen guten Tag. Hier eine kleine Nachricht von mir, verpackt in einem Spiel. Viel Spaß bei Stack The Letter :)",
     regards: "Liebe Grüße, Colin",
@@ -204,14 +205,18 @@ export default function Home({ loaderData }: Route.ComponentProps) {
     // Add $BLOCK_HEIGHT cells on top of the board to drop in the blocks from above
     // These will not be rendered (see map in below html)
     const board = getBoard(columns, rows + BLOCK_HEIGHT);
-    // const streamOfBlocks = getReadableBlocks({ letter, columns });
-    const streamOfBlocks = [
-      transformTextToBlock(letter.headline.toLowerCase()),
-      ...letter.message
-        .split(" ")
-        .map((word) => transformTextToBlock(word.toLowerCase())),
-      transformTextToBlock(letter.regards.toLowerCase()),
-    ];
+    const streamOfBlocks = getReadableBlocks({
+      letter,
+      columns,
+      screenWidth: window.innerWidth,
+    });
+    // const streamOfBlocks = [
+    //   transformTextToBlock(letter.headline.toLowerCase()),
+    //   ...letter.message
+    //     .split(" ")
+    //     .map((word) => transformTextToBlock(word.toLowerCase())),
+    //   transformTextToBlock(letter.regards.toLowerCase()),
+    // ];
     const position = {
       x:
         Math.floor(board[0].length / 2) -
@@ -552,7 +557,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
           <>
             <h1>You got it!</h1>
             <p>Here is the full letter from {author}</p>
-            <h2>{letter.headline}</h2>
+            <h2>{letter.salutation}</h2>
             <p>{letter.message}</p>
             <p>{letter.regards}</p>
             <p>Press Enter to try again.</p>
