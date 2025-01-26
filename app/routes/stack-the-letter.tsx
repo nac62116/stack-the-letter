@@ -53,10 +53,10 @@ export async function loader({}: Route.LoaderArgs) {
   // FEATURE: New setting: Let user choose their own color palette
   const author = "Colin";
   const letter = {
-    salutation: "Ganz :) ;-) - ganz: ganz ganz Liebe Ronja,",
+    salutation: "Liebe Momi,",
     message:
-      "Was geht so bei dir? Ich hoffe du hast einen guten Tag. Hier eine kleine Nachricht von mir, verpackt in einem Spiel. Viel Spaß bei Stack The Letter :)",
-    regards: "Liebe Grüße, Colin",
+      "es ist sehr schön bei dir zu Besuch zu sein. Danke für deine Herzlichkeit und die schönen Gespräche mit dir. Bei dir fühle ich mich immer sehr wohl und das Essen ist wie man es sich bei seiner Oma vorstellt: Großartig! Bleib so wie du bist.",
+    regards: "Sonnige Grüße, Colin",
   } as const;
 
   return {
@@ -210,13 +210,6 @@ export default function StackTheLetter({ loaderData }: Route.ComponentProps) {
       columns,
       screenWidth: window.innerWidth,
     });
-    // const streamOfBlocks = [
-    //   transformTextToBlock(letter.headline.toLowerCase()),
-    //   ...letter.message
-    //     .split(" ")
-    //     .map((word) => transformTextToBlock(word.toLowerCase())),
-    //   transformTextToBlock(letter.regards.toLowerCase()),
-    // ];
     const position = {
       x:
         Math.floor(board[0].length / 2) -
@@ -543,7 +536,6 @@ export default function StackTheLetter({ loaderData }: Route.ComponentProps) {
 
   return (
     <div className="relative w-full grid grid-cols-1 justify-center text-center gap-4 select-none">
-      {/* TODO: Mobile controls */}
       <div id="header-placeholder" className="w-full h-8" />
       <div className="grid grid-cols-1 justify-center">
         {gameStatus.current === "idle" ||
@@ -620,6 +612,73 @@ export default function StackTheLetter({ loaderData }: Route.ComponentProps) {
           </div>
         ) : null}
       </div>
+      {/* TODO: Test this on a real touch device. Browser simulator fires the touchEnd event right after touchStart even if i hold the simulated touch. */}
+      <div
+        className="fixed top-0 w-full h-dvh flex flex-col justify-end bg-gray-800 transition-opacity opacity-0"
+        onTouchStart={(event) => {
+          event.currentTarget.classList.remove("opacity-0");
+          if (event.currentTarget.classList.contains("opacity-50") === false) {
+            event.currentTarget.classList.add("opacity-50");
+          }
+        }}
+        onTouchEnd={(event) => {
+          event.currentTarget.classList.remove("opacity-50");
+          if (event.currentTarget.classList.contains("opacity-0") === false) {
+            event.currentTarget.classList.add("opacity-0");
+          }
+        }}
+      >
+        <div className="grid grid-cols-3 w-full">
+          <button
+            className="w-full h-16 flex justify-center items-center border border-gray-300 bg-gray-500 focus:bg-gray-300"
+            title="Move left"
+            onTouchStart={() => {
+              if (left.current === false) {
+                setLeft(true);
+              }
+            }}
+            onTouchEnd={() => {
+              if (left.current === true) {
+                setLeft(false);
+              }
+            }}
+          >
+            <span className="rotate-90">▼</span>
+          </button>
+          <button
+            className="w-full h-16 flex justify-center items-center border border-gray-300 bg-gray-500 focus:bg-gray-300"
+            title="Move Down"
+            onTouchStart={() => {
+              if (accelerate.current === false) {
+                setAccelerate(true);
+              }
+            }}
+            onTouchEnd={() => {
+              if (accelerate.current === true) {
+                setAccelerate(false);
+              }
+            }}
+          >
+            <span>▼</span>
+          </button>
+          <button
+            className="w-full h-16 flex justify-center items-center border border-gray-300 bg-gray-500 focus:bg-gray-300"
+            title="Move Right"
+            onTouchStart={() => {
+              if (right.current === false) {
+                setRight(true);
+              }
+            }}
+            onTouchEnd={() => {
+              if (right.current === true) {
+                setRight(false);
+              }
+            }}
+          >
+            <span className="-rotate-90">▼</span>
+          </button>
+        </div>
+      </div>
       <header className="absolute top-0 w-full h-8 pb-1 flex justify-between items-center gap-4 px-4 bg-gradient-to-r from-emerald-950 from-1% via-transparent via-50% to-emerald-950 to-99%">
         <h1 className="text-nowrap">
           Stack The Letter
@@ -649,7 +708,7 @@ export default function StackTheLetter({ loaderData }: Route.ComponentProps) {
             </div>
             <label
               htmlFor="how-to-play"
-              className="relative cursor-pointer group-has-[:checked]:absolute group-has-[:checked]:inset-0 group-has-[:checked]:h-screen group-has-[:checked]:text-end group-has-[:checked]:pr-4 group-has-[:checked]:pt-[2px]"
+              className="relative cursor-pointer group-has-[:checked]:absolute group-has-[:checked]:inset-0 group-has-[:checked]:h-dvh group-has-[:checked]:text-end group-has-[:checked]:pr-4 group-has-[:checked]:pt-[2px]"
             >
               How to play?
             </label>
