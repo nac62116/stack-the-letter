@@ -14,6 +14,7 @@ import {
   type GameStatus,
   moveBlock,
   type Position,
+  removeCellsOfSameColor,
   SIDE_MOVEMENT_SPEED,
 } from "~/shared/stack-the-letter-runtime";
 import {
@@ -456,11 +457,8 @@ export default function StackTheLetter({ loaderData }: Route.ComponentProps) {
         }
         // Checking if any movement did happen in this frame of the render cycle
         if (movementResult !== undefined) {
-          // Update the board state
-          statesToUpdate.push(() => {
-            setBoard(movementResult.board);
-          });
-          /** Now check how game state has changed and accordingly update following states if needed:
+          /** Check how game state has changed and accordingly update following states if needed:
+           * - board
            * - block
            * - blockIndex
            * - position
@@ -468,32 +466,52 @@ export default function StackTheLetter({ loaderData }: Route.ComponentProps) {
            * And request the next frame if needed
            */
           if (movementResult.gameStatus === "running") {
+            statesToUpdate.push(() => {
+              if (movementResult !== undefined) {
+                setBoard(movementResult.board);
+              }
+            });
             statesToUpdate.push(() => setGameStatus("running"));
-            statesToUpdate.push(() => setBlock(movementResult.block));
-            statesToUpdate.push(() => setPosition(movementResult.position));
+            statesToUpdate.push(() => {
+              if (movementResult !== undefined) {
+                setBlock(movementResult.block);
+              }
+            });
+            statesToUpdate.push(() => {
+              if (movementResult !== undefined) {
+                setPosition(movementResult.position);
+              }
+            });
             nextStep = true;
           } else if (movementResult.gameStatus === "nextBlockPlease") {
-            // TODO: Clearing the board
-            // Check if there are at least $X (f.e 10) cells with the same color in one place
-            // Meaning all are neighbors of each other and share the same color
-            // -> If so, remove them and move all rows above down
             const currentBlockIndex = blockIndex.current;
             const nextBlock =
               setup.current.streamOfBlocks[currentBlockIndex + 1];
             if (nextBlock === undefined) {
               statesToUpdate.push(() => setGameStatus("youWon"));
             } else {
+              movementResult = removeCellsOfSameColor({
+                ...movementResult,
+                boardCellElements: boardCellElements.current,
+              });
+              statesToUpdate.push(() => {
+                if (movementResult !== undefined) {
+                  setBoard(movementResult.board);
+                }
+              });
               statesToUpdate.push(() => setGameStatus("running"));
               statesToUpdate.push(() => setBlock(nextBlock));
               statesToUpdate.push(() => setBlockIndex(currentBlockIndex + 1));
-              statesToUpdate.push(() =>
-                setPosition({
-                  x:
-                    Math.floor(movementResult.board[0].length / 2) -
-                    Math.floor(nextBlock[0].length / 2),
-                  y: 0,
-                })
-              );
+              statesToUpdate.push(() => {
+                if (movementResult !== undefined) {
+                  setPosition({
+                    x:
+                      Math.floor(movementResult.board[0].length / 2) -
+                      Math.floor(nextBlock[0].length / 2),
+                    y: 0,
+                  });
+                }
+              });
               nextStep = true;
             }
           } else if (movementResult.gameStatus === "gameOver") {

@@ -348,6 +348,219 @@ export function moveBlock(
   };
 }
 
+const NUMBER_OF_GROUPED_CELLS_TO_REMOVE = 10 as const;
+
+export function removeCellsOfSameColor(options: {
+  board: Board;
+  boardCellElements: BoardCellElements;
+  cellsToUpdate: CellsToUpdate;
+  block: Block;
+  position: Position;
+  gameStatus: GameStatus;
+}) {
+  const {
+    board,
+    boardCellElements,
+    cellsToUpdate,
+    block,
+    position,
+    gameStatus,
+  } = options;
+  const currentBoard = board.map((row) => row.slice());
+
+  // TODO: Calculate new board -> Remove group of cells where $NUMBER_OF_GROUPED_CELLS_TO_REMOVE cells of the same color are connected
+  // Check if there are at least $X (f.e 10) cells with the same color in one place
+  // Meaning all are neighbors of each other and share the same color
+  // -> If so, remove them and move all rows above down
+  const alreadyCheckedGroupsOfSameColorCells: Position[][] = [];
+  const newBoard = currentBoard.map((row, rowIndex) =>
+    row.map((cell, columnIndex) => {
+      const currentGroupOfSameColorCells: Position[] = [];
+      let currentCell = cell;
+      let currentCellPosition = {
+        x: columnIndex,
+        y: rowIndex,
+      };
+      // TODO: If currentCell is in any group of alreadyCheckedGroups
+      // then return 0 if this group.length is above $NUMBER_OF_GROUPED_CELLS_TO_REMOVE
+      // else return the cell value
+      let topNeighborCell =
+        currentBoard[rowIndex - 1] !== undefined
+          ? currentBoard[rowIndex - 1][columnIndex] !== undefined
+            ? currentBoard[rowIndex - 1][columnIndex]
+            : undefined
+          : undefined;
+      let topNeighborCellPosition = {
+        x: columnIndex,
+        y: rowIndex - 1,
+      };
+      let rightNeighborCell =
+        currentBoard[rowIndex][columnIndex + 1] !== undefined
+          ? currentBoard[rowIndex][columnIndex + 1]
+          : undefined;
+      let rightNeighborCellPosition = {
+        x: columnIndex + 1,
+        y: rowIndex,
+      };
+      let bottomNeighborCell =
+        currentBoard[rowIndex + 1] !== undefined
+          ? currentBoard[rowIndex + 1][columnIndex] !== undefined
+            ? currentBoard[rowIndex + 1][columnIndex]
+            : undefined
+          : undefined;
+      let bottomNeighborCellPosition = {
+        x: columnIndex,
+        y: rowIndex + 1,
+      };
+      let leftNeighborCell =
+        currentBoard[rowIndex][columnIndex - 1] !== undefined
+          ? currentBoard[rowIndex][columnIndex - 1]
+          : undefined;
+      let leftNeighborCellPosition = {
+        x: columnIndex - 1,
+        y: rowIndex,
+      };
+      const searchSameColorNeighbors = (options: {
+        currentCell: number | undefined;
+        currentCellPosition: Position;
+        topNeighborCell: number | undefined;
+        topNeighborCellPosition: Position;
+        rightNeighborCell: number | undefined;
+        rightNeighborCellPosition: Position;
+        bottomNeighborCell: number | undefined;
+        bottomNeighborCellPosition: Position;
+        leftNeighborCell: number | undefined;
+        leftNeighborCellPosition: Position;
+      }) => {
+        const {
+          currentCell,
+          currentCellPosition,
+          topNeighborCell,
+          topNeighborCellPosition,
+          rightNeighborCell,
+          rightNeighborCellPosition,
+          bottomNeighborCell,
+          bottomNeighborCellPosition,
+          leftNeighborCell,
+          leftNeighborCellPosition,
+        } = options;
+        if (
+          currentCell === topNeighborCell &&
+          currentGroupOfSameColorCells.includes(topNeighborCellPosition) ===
+            false
+        ) {
+          currentGroupOfSameColorCells.push(topNeighborCellPosition);
+          const topNeighborTopNeighborCell =
+            currentBoard[topNeighborCellPosition.y - 1] !== undefined
+              ? currentBoard[topNeighborCellPosition.y - 1][
+                  topNeighborCellPosition.x
+                ] !== undefined
+                ? currentBoard[topNeighborCellPosition.y - 1][
+                    topNeighborCellPosition.x
+                  ]
+                : undefined
+              : undefined;
+          const topNeighborTopNeighborCellPosition = {
+            x: topNeighborCellPosition.x,
+            y: topNeighborCellPosition.y - 1,
+          };
+          const topNeighborRightNeighborCell =
+            currentBoard[topNeighborCellPosition.y] !== undefined
+              ? currentBoard[topNeighborCellPosition.y][
+                  topNeighborCellPosition.x + 1
+                ] !== undefined
+                ? currentBoard[topNeighborCellPosition.y][
+                    topNeighborCellPosition.x + 1
+                  ]
+                : undefined
+              : undefined;
+          const topNeighborRightNeighborCellPosition = {
+            x: topNeighborCellPosition.x + 1,
+            y: topNeighborCellPosition.y,
+          };
+          const topNeighborLeftNeighborCell =
+            currentBoard[topNeighborCellPosition.y] !== undefined
+              ? currentBoard[topNeighborCellPosition.y][
+                  topNeighborCellPosition.x - 1
+                ] !== undefined
+                ? currentBoard[topNeighborCellPosition.y][
+                    topNeighborCellPosition.x - 1
+                  ]
+                : undefined
+              : undefined;
+          const topNeighborLeftNeighborCellPosition = {
+            x: topNeighborCellPosition.x - 1,
+            y: topNeighborCellPosition.y,
+          };
+          searchSameColorNeighbors({
+            currentCell: topNeighborCell,
+            currentCellPosition: topNeighborCellPosition,
+            topNeighborCell: topNeighborTopNeighborCell,
+            topNeighborCellPosition: topNeighborTopNeighborCellPosition,
+            rightNeighborCell: topNeighborRightNeighborCell,
+            rightNeighborCellPosition: topNeighborRightNeighborCellPosition,
+            bottomNeighborCell: currentCell,
+            bottomNeighborCellPosition: {
+              x: currentCellPosition.x,
+              y: currentCellPosition.y,
+            },
+            leftNeighborCell: topNeighborLeftNeighborCell,
+            leftNeighborCellPosition: topNeighborLeftNeighborCellPosition,
+          });
+        }
+        // TODO: Implement the same for right, bottom and left
+      };
+      // TODO: Check if currentGroupOfSameColorCells.length >= $NUMBER_OF_GROUPED_CELLS_TO_REMOVE
+      // If so return 0 and add the group to all checked groups
+      // Else return cell
+
+      // TODO: Down movement of above cells and checking again for new groups that have been built due to this movement
+
+      return cell;
+    })
+  );
+
+  const newCellsToUpdate = boardCellElements
+    .map((row, rowIndex) =>
+      row.map((cellElement, columnIndex) => {
+        // The top $BLOCK_HEIGHT rows are not rendered and just used for dropping the block
+        // Their corresponding elements on boardCellElements are null
+        if (cellElement === null) {
+          return {
+            element: null,
+            className: "",
+          };
+        }
+        // if newBoard cell is the same as the currentBoard cell value -> no need to update
+        if (
+          newBoard[rowIndex][columnIndex] ===
+          currentBoard[rowIndex][columnIndex]
+        ) {
+          return {
+            element: null,
+            className: "",
+          };
+        }
+        // Add new board cell to cellsToUpdate
+        return {
+          element: cellElement,
+          className: `${
+            cellColors[newBoard[rowIndex][columnIndex]] || FALLBACK_CELL_COLOR
+          } ${CELL_WIDTH_CLASS_NAME} ${CELL_HEIGHT_CLASS_NAME} ${CELL_BASE_CLASS_NAME}`,
+        };
+      })
+    )
+    .flat();
+
+  return {
+    board: newBoard,
+    cellsToUpdate: cellsToUpdate.concat(newCellsToUpdate),
+    block,
+    position,
+    gameStatus,
+  };
+}
+
 function castToBlock(block: number[][], originalBlock: Block) {
   // This is the runtime check to verify the assertion to Block type
   let newBlock = block;
