@@ -2,32 +2,29 @@
 // we need to explicitly map cell values
 // to the corresponding tailwind color classes.
 
-type CellColors = [
+import type { ArrayElement } from "./type-helper";
+
+type CellColorClassNames = [
   "bg-inherit", // 0 <- inactive cell color
   // Below cells are all active
-  "bg-red-500", // 1
-  "bg-yellow-500", // 2
-  "bg-green-500", // 3
-  "bg-blue-500", // 4
-  "bg-indigo-500", // 5
-  "bg-purple-500", // 6
-  "bg-pink-500", // 7
-  "bg-gray-500", // 8
-  "bg-white" // 9
+  "bg-orange-500/80", // 1
+  "bg-yellow-500/75", // 2
+  "bg-sky-500/80", // 3
+  "bg-red-500/75", // 4
+  "bg-purple-500/90" // 5
 ];
-export type CellColorNumber = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
+export const cellColorNumbers = [0, 1, 2, 3, 4, 5] as const;
+export type CellColorNumber = ArrayElement<typeof cellColorNumbers>;
+export const activeCellColorNumbers = [1, 2, 3, 4, 5] as const;
+export type ActiveCellColorNumber = ArrayElement<typeof activeCellColorNumbers>;
 
-export const FALLBACK_CELL_COLOR = "bg-ember-500"; // >= $cellColors.length
+export const FALLBACK_CELL_COLOR = "bg-ember-500/85"; // >= $cellColors.length
 
-export const cellColors: CellColors = [
+export const cellColorClassNames: CellColorClassNames = [
   "bg-inherit",
-  "bg-red-500",
-  "bg-yellow-500",
-  "bg-green-500",
-  "bg-blue-500",
-  "bg-indigo-500",
-  "bg-purple-500",
-  "bg-pink-500",
-  "bg-gray-500",
-  "bg-white",
+  "bg-orange-500/80",
+  "bg-yellow-500/75",
+  "bg-sky-500/80",
+  "bg-red-500/75",
+  "bg-purple-500/90",
 ];

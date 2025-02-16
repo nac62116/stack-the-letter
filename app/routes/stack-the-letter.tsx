@@ -35,7 +35,7 @@ import {
   MIN_BOARD_COLUMNS,
   MIN_BOARD_ROWS,
 } from "~/shared/stack-the-letter-builder";
-import { cellColors } from "~/shared/dynamic-cell-color-map";
+import { cellColorClassNames } from "~/shared/dynamic-cell-color-map";
 import { Letter } from "~/components/Letter";
 import { ronjasLetter } from "letters/ronja";
 
@@ -59,7 +59,7 @@ export async function loader({ request }: Route.LoaderArgs) {
   const defaultLetter = {
     salutation: "Hey there,",
     message:
-      "i am Colin and i made this app. Its licensed under MIT if you want to use it for your own projects. I hope you enjoy it. Soon you will be able to write your own letters and choose your own color palette.",
+      "i'm Colin and i made this app. Its licensed under MIT if you want to use it for your own projects. I hope you enjoy it. Soon you will be able to write your own letters and choose your own color palette.",
     regards: "Greetings, Colin",
   } as const;
 
@@ -320,7 +320,7 @@ export default function StackTheLetter({ loaderData }: Route.ComponentProps) {
               statesToUpdate.push(() => setPosition(setup.current.position));
               for (let cell of boardCellElements.current.flat()) {
                 if (cell !== null) {
-                  cell.className = `${cellColors[0]} ${CELL_WIDTH_CLASS_NAME} ${CELL_HEIGHT_CLASS_NAME} ${CELL_BASE_CLASS_NAME}`;
+                  cell.className = `${cellColorClassNames[0]} ${CELL_WIDTH_CLASS_NAME} ${CELL_HEIGHT_CLASS_NAME} ${CELL_BASE_CLASS_NAME}`;
                 }
               }
               for (const stateUpdate of statesToUpdate) {
@@ -716,14 +716,14 @@ export default function StackTheLetter({ loaderData }: Route.ComponentProps) {
           </button>
         </div>
       </div>
-      <header className="absolute top-0 w-full h-8 pb-1 flex justify-between items-center gap-4 px-4 bg-linear-to-r from-emerald-950 from-1% via-transparent via-50% to-emerald-950 to-99%">
+      <header className="absolute top-0 w-full h-8 pb-1 flex justify-between items-center gap-4 px-4 bg-linear-to-r from-sky-950 from-1% via-transparent via-50% to-sky-950 to-99%">
         <h1 className="text-nowrap">
           Stack The Letter
           {boardLoaded.current === false ? " - Loading..." : ""}
         </h1>
         <nav className="w-full flex justify-end">
           <div className="flex items-center group">
-            <div className="absolute h-dvh inset-0 bg-emerald-950 bg-opacity-70 group-has-checked:flex hidden justify-center items-center">
+            <div className="absolute h-dvh inset-0 bg-sky-950/90 group-has-checked:flex hidden justify-center items-center">
               <section className="flex flex-col gap-2 border border-gray-600 bg-black p-4 rounded-xl">
                 <h2 className="text-2xl text-start">How to play?</h2>
                 <ul className="text-left">
@@ -749,8 +749,8 @@ export default function StackTheLetter({ loaderData }: Route.ComponentProps) {
                         position="relative"
                       >
                         {[
-                          [0, 2, 2],
-                          [2, 2, 2],
+                          [0, 1, 2],
+                          [3, 4, 5],
                         ].map((row, rowIndex) =>
                           row.map((cellValue, columnIndex) => (
                             <Cell

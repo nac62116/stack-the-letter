@@ -1,6 +1,6 @@
 import React from "react";
 import {
-  cellColors,
+  cellColorClassNames,
   FALLBACK_CELL_COLOR,
 } from "~/shared/dynamic-cell-color-map";
 import { gridCols, gridRows } from "~/shared/dynamic-grid-map";
@@ -143,7 +143,7 @@ export function Cell(props: { id: string; cellValue: number }) {
     <div
       id={id}
       className={`${
-        cellColors[cellValue] || FALLBACK_CELL_COLOR
+        cellColorClassNames[cellValue] || FALLBACK_CELL_COLOR
       } ${CELL_WIDTH_CLASS_NAME} ${CELL_HEIGHT_CLASS_NAME} ${CELL_BASE_CLASS_NAME}`}
     />
   );

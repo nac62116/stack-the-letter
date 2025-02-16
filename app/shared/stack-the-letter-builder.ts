@@ -5,6 +5,10 @@ import {
   type Block,
   EMPTY_BLOCK,
 } from "./alphabet";
+import {
+  activeCellColorNumbers,
+  type ActiveCellColorNumber,
+} from "./dynamic-cell-color-map";
 
 // Board
 export type Board = number[][];
@@ -125,58 +129,55 @@ export function getReadableBlocks(options: {
 
 export function transformTextToBlock(text: string): Block {
   let block = EMPTY_BLOCK;
-  const letters = text.split("");
-  // seperator between words but not for the first word
-  block = block.map((line, index) =>
-    // Runtime check to verify below assertion to Block type
-    index < BLOCK_HEIGHT
-      ? line[0] !== undefined
-        ? [...line, ...blockAlphabet[" "][index]]
-        : [...line]
-      : undefined
-  ) as Block;
-  for (const letter of letters) {
-    if (letter in blockAlphabet) {
-      const typedLetter = letter as keyof typeof blockAlphabet;
-      const letterAsBlock = [...blockAlphabet[typedLetter]];
-      block = block.map((line, index) => {
-        // Runtime check to verify below assertion to Block type
-        if (index >= BLOCK_HEIGHT) {
-          return undefined;
+  const characters = text.split("");
+  const randomCellColorNumber =
+    Math.floor(Math.random() * activeCellColorNumbers.length) + 1;
+  let currentColor: ActiveCellColorNumber = activeCellColorNumbers.includes(
+    randomCellColorNumber as ActiveCellColorNumber
+  )
+    ? (randomCellColorNumber as ActiveCellColorNumber)
+    : activeCellColorNumbers[0];
+  let characterIndex = 0;
+  for (const character of characters) {
+    if (character in blockAlphabet) {
+      const typedCharacter = character as keyof typeof blockAlphabet;
+      // Switch to a random color after each space
+      if (typedCharacter === " ") {
+        const randomCellColorNumber =
+          Math.floor(Math.random() * activeCellColorNumbers.length) + 1;
+        currentColor = activeCellColorNumbers.includes(
+          randomCellColorNumber as ActiveCellColorNumber
+        )
+          ? (randomCellColorNumber as ActiveCellColorNumber)
+          : activeCellColorNumbers[0];
+      }
+      const characterAsBlock = blockAlphabet[typedCharacter].map((row) => {
+        return row.map((cell) => {
+          if (cell !== 0) {
+            return currentColor;
+          }
+          return cell;
+        });
+      }) as Block;
+      const seperator = blockAlphabet[" "];
+      block = block.map((row, rowIndex) => {
+        if (characterIndex === characters.length - 1) {
+          // seperator between words but not for the last word
+          return row.concat(characterAsBlock[rowIndex]);
         }
-        if (line.some((letter) => letter === undefined)) {
-          return [...letterAsBlock[index]];
-        }
-        if (index >= BLOCK_HEIGHT) {
-          console.error(
-            `Block has wrong line height. Beginning a new block with current letter '${typedLetter}'. Block with wrong line height: ${[
-              ...block,
-            ]}`
-          );
-          return [...letterAsBlock[index]];
-        }
-        // No seperator if its the first letter
-        if (line[0] === undefined) {
-          return [...letterAsBlock[index]];
-        }
-        return [
-          ...line,
-          // Seperator between letters
-          ...blockAlphabet[" "][index],
-          // Next letter
-          ...letterAsBlock[index],
-        ];
+        return row
+          .concat(characterAsBlock[rowIndex])
+          .concat(seperator[rowIndex]);
       }) as Block;
     } else {
-      console.error(`Letter ${letter} not found in alphabet and was left out.`);
+      console.error(
+        `Letter ${character} not found in alphabet and was left out.`
+      );
     }
   }
+  // Runtime check for above assertions (as Block)
   if (block.length !== BLOCK_HEIGHT) {
     console.error("Block has wrong line height");
-    return DEFAULT_BLOCK;
-  }
-  if (block.some((line, index) => line.some((value) => value === undefined))) {
-    console.error("Block has undefined instead of number inside line");
     return DEFAULT_BLOCK;
   }
   return block;

@@ -5,7 +5,7 @@ import {
 } from "~/components/Board";
 import { type Block } from "~/shared/alphabet";
 import {
-  cellColors,
+  cellColorClassNames,
   FALLBACK_CELL_COLOR,
 } from "~/shared/dynamic-cell-color-map";
 import type { Board } from "./stack-the-letter-builder";
@@ -332,7 +332,8 @@ export function moveBlock(
         return {
           element: cellElement,
           className: `${
-            cellColors[newBoard[rowIndex][columnIndex]] || FALLBACK_CELL_COLOR
+            cellColorClassNames[newBoard[rowIndex][columnIndex]] ||
+            FALLBACK_CELL_COLOR
           } ${CELL_WIDTH_CLASS_NAME} ${CELL_HEIGHT_CLASS_NAME} ${CELL_BASE_CLASS_NAME}`,
         };
       })
@@ -852,7 +853,8 @@ export function removeCellsOfSameColor(options: {
         return {
           element: cellElement,
           className: `${
-            cellColors[newBoard[rowIndex][columnIndex]] || FALLBACK_CELL_COLOR
+            cellColorClassNames[newBoard[rowIndex][columnIndex]] ||
+            FALLBACK_CELL_COLOR
           } ${CELL_WIDTH_CLASS_NAME} ${CELL_HEIGHT_CLASS_NAME} ${CELL_BASE_CLASS_NAME} transition-all duration-1000`,
         };
       })
