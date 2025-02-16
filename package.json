@@ -9,6 +9,7 @@
     "start": "react-router-serve ./build/server/index.js",
     "typegen": "react-router typegen",
     "typecheck": "react-router typegen && tsc",
+    "docker:npm:install": "npm install --package-lock-only",
     "docker:build": "docker compose build",
     "docker:build:no-cache": "docker compose build --no-cache",
     "docker:start": "docker compose up -d",
