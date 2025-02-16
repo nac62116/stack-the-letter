@@ -9,11 +9,11 @@
     "start": "react-router-serve ./build/server/index.js",
     "typegen": "react-router typegen",
     "typecheck": "react-router typegen && tsc",
-    "docker:build": "docker-compose build",
-    "docker:build:no-cache": "docker-compose build --no-cache",
-    "docker:start": "docker-compose up -d",
-    "docker:start:watch": "docker-compose up",
-    "docker:stop": "docker-compose down"
+    "docker:build": "docker compose build",
+    "docker:build:no-cache": "docker compose build --no-cache",
+    "docker:start": "docker compose up -d",
+    "docker:start:watch": "docker compose up",
+    "docker:stop": "docker compose down"
   },
   "dependencies": {
     "@react-router/node": "^7.1.5",

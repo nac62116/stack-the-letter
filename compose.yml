@@ -2,15 +2,32 @@ name: stack-the-letter
 
 services:
   stack-the-letter-service:
-    image: stack-the-letter-image:latest  # Use the image built in the previous step
-    container_name: stack-the-letter  # Name the container
-    restart: unless-stopped  # Restart the container unless it was explicitly stopped
+    image: stack-the-letter-image:latest
+    container_name: stack-the-letter
+    restart: unless-stopped
     build:
-      context: .  # The build context is the current directory
+      context: .
       args:
-        NODE_VERSION: ${NODE_VERSION}  # Pass NODE_VERSION from .env
-        NPM_VERSION: ${NPM_VERSION}      # Pass NPM_VERSION from .env
-    ports:
-      - "3000:3000"  # Map port 3000 on the host to port 3000 in the container
+        NODE_VERSION: ${NODE_VERSION}
+        NPM_VERSION: ${NPM_VERSION}
+    expose:
+      - "3000"
     env_file:
-      - .env # Use .env file for environment variables that are used inside the container
+      - .env
+    networks:
+      - app-network
+
+  nginx:
+    image: nginx:latest
+    volumes:
+      - /etc/nginx/sites-available/westminster-abi.org:/etc/nginx/conf.d/default.conf:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+    ports:
+      - "80:80"
+      - "443:443"
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
