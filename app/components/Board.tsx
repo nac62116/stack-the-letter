@@ -40,20 +40,47 @@ const CELL_GAP_CLASS_NAME = gap[CELL_GAP];
 export function Board(props: {
   id: string;
   children: React.ReactNode | HTMLCollection;
+  fixedSize?: {
+    width: number;
+    height: number;
+    showBorderX: boolean;
+    showBorderY: boolean;
+  };
+  position?: "absolute" | "relative";
 }) {
-  const { id, children } = props;
+  const { id, fixedSize, position = "absolute", children } = props;
 
   const childrenArray = Array.isArray(children) ? children : [children];
 
-  const initialContainerClassName = "absolute top-0 grid place-items-center";
+  let initialContainerClassName = `${position} top-0 grid place-items-center`;
+  if (typeof fixedSize !== "undefined") {
+    initialContainerClassName = `${width[fixedSize.width]} ${
+      height[fixedSize.height]
+    } ${initialContainerClassName}`;
+  }
   const containerClassNameRef = React.useRef<string>(initialContainerClassName);
   const containerRef = React.useRef<HTMLDivElement>(null);
-  const initialClassName = `grid place-items-center ${CELL_GAP_CLASS_NAME}`;
+  let initialClassName = `grid place-items-center ${CELL_GAP_CLASS_NAME}`;
+  if (typeof fixedSize !== "undefined") {
+    const columns = Math.floor(
+      (fixedSize.width + CELL_GAP) / (CELL_WIDTH + CELL_GAP)
+    );
+    const rows = Math.floor(
+      (fixedSize.height + CELL_GAP) / (CELL_HEIGHT + CELL_GAP)
+    );
+    initialClassName = `${width[fixedSize.width]} ${height[fixedSize.height]} ${
+      gridCols[columns]
+    } ${gridRows[rows]} ${initialClassName}`;
+  }
   const classNameRef = React.useRef<string>(initialClassName);
   const ref = React.useRef<HTMLDivElement>(null);
 
   React.useEffect(() => {
-    if (ref.current !== null && containerRef.current !== null) {
+    if (
+      typeof fixedSize === "undefined" &&
+      ref.current !== null &&
+      containerRef.current !== null
+    ) {
       // Set grid cols and rows based on screen width and height
       const screenWidth = Math.floor(window.innerWidth);
       const screenHeight = Math.floor(window.innerHeight);

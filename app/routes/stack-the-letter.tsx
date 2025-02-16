@@ -13,6 +13,7 @@ import {
   DOWN_MOVEMENT_SPEED,
   type GameStatus,
   moveBlock,
+  NUMBER_OF_GROUPED_CELLS_TO_REMOVE,
   type Position,
   removeCellsOfSameColor,
   SIDE_MOVEMENT_SPEED,
@@ -709,16 +710,45 @@ export default function StackTheLetter({ loaderData }: Route.ComponentProps) {
                 <h2 className="text-2xl text-start">How to play?</h2>
                 <ul className="text-left">
                   <li className="flex">
-                    <div className="w-7">💌</div>Press Enter to start the game.
+                    <div className="w-8">💌</div>Press Enter to start the game.
                   </li>
                   <li className="flex">
-                    <div className="w-7">🏃</div>Press Escape to stop the game.
+                    <div className="w-8">🏃</div>Press Escape to stop the game.
                   </li>
                   <li className="flex">
-                    <div className="w-7">⌨️</div>Arrow keys to move blocks.
+                    <div className="w-8">⌨️</div>Arrow keys to move blocks.
                   </li>
                   <li className="flex">
-                    <div className="w-7">📜</div>Find out what {author} wrote
+                    <div className="w-8 flex pl-1 items-center">
+                      <BoardComponent
+                        id="how-to-play-board"
+                        fixedSize={{
+                          width: 12,
+                          height: 8,
+                          showBorderX: false,
+                          showBorderY: false,
+                        }}
+                        position="relative"
+                      >
+                        {[
+                          [0, 2, 2],
+                          [2, 2, 2],
+                        ].map((row, rowIndex) =>
+                          row.map((cellValue, columnIndex) => (
+                            <Cell
+                              id={`how-to-play-board-row${rowIndex}column${columnIndex}`}
+                              key={`how-to-play-board-row${rowIndex}column${columnIndex}`}
+                              cellValue={cellValue}
+                            />
+                          ))
+                        )}
+                      </BoardComponent>
+                    </div>
+                    {NUMBER_OF_GROUPED_CELLS_TO_REMOVE} cells in a group will be
+                    removed.
+                  </li>
+                  <li className="flex">
+                    <div className="w-8">📜</div>Find out what {author} wrote
                     you.
                   </li>
                 </ul>

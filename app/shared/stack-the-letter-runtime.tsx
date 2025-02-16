@@ -9,6 +9,7 @@ import {
   FALLBACK_CELL_COLOR,
 } from "~/shared/dynamic-cell-color-map";
 import type { Board } from "./stack-the-letter-builder";
+import { transposeMatrix } from "./array-helper";
 
 type MovementDirection =
   | "left"
@@ -348,32 +349,330 @@ export function moveBlock(
   };
 }
 
-const NUMBER_OF_GROUPED_CELLS_TO_REMOVE = 10 as const;
+export const NUMBER_OF_GROUPED_CELLS_TO_REMOVE = 50 as const;
 
-export function removeCellsOfSameColor(options: {
-  board: Board;
-  boardCellElements: BoardCellElements;
-  cellsToUpdate: CellsToUpdate;
-  block: Block;
-  position: Position;
-  gameStatus: GameStatus;
+function searchSameColorNeighbors(options: {
+  currentBoard: Board;
+  currentGroupOfSameColorCells: Position[];
+  currentCell: number | undefined;
+  currentCellPosition: Position;
+  topNeighborCell: number | undefined;
+  topNeighborCellPosition: Position;
+  rightNeighborCell: number | undefined;
+  rightNeighborCellPosition: Position;
+  bottomNeighborCell: number | undefined;
+  bottomNeighborCellPosition: Position;
+  leftNeighborCell: number | undefined;
+  leftNeighborCellPosition: Position;
 }) {
   const {
-    board,
-    boardCellElements,
-    cellsToUpdate,
-    block,
-    position,
-    gameStatus,
+    currentBoard,
+    currentGroupOfSameColorCells,
+    currentCell,
+    currentCellPosition,
+    topNeighborCell,
+    topNeighborCellPosition,
+    rightNeighborCell,
+    rightNeighborCellPosition,
+    bottomNeighborCell,
+    bottomNeighborCellPosition,
+    leftNeighborCell,
+    leftNeighborCellPosition,
   } = options;
-  const currentBoard = board.map((row) => row.slice());
+  // Check top cell recursive
+  if (
+    currentCell === topNeighborCell &&
+    currentGroupOfSameColorCells.some((position) => {
+      return (
+        position.x === topNeighborCellPosition.x &&
+        position.y === topNeighborCellPosition.y
+      );
+    }) === false
+  ) {
+    currentGroupOfSameColorCells.push(topNeighborCellPosition);
+    const topNeighborTopNeighborCell =
+      currentBoard[topNeighborCellPosition.y - 1] !== undefined
+        ? currentBoard[topNeighborCellPosition.y - 1][
+            topNeighborCellPosition.x
+          ] !== undefined
+          ? currentBoard[topNeighborCellPosition.y - 1][
+              topNeighborCellPosition.x
+            ]
+          : undefined
+        : undefined;
+    const topNeighborTopNeighborCellPosition = {
+      x: topNeighborCellPosition.x,
+      y: topNeighborCellPosition.y - 1,
+    };
+    const topNeighborRightNeighborCell =
+      currentBoard[topNeighborCellPosition.y] !== undefined
+        ? currentBoard[topNeighborCellPosition.y][
+            topNeighborCellPosition.x + 1
+          ] !== undefined
+          ? currentBoard[topNeighborCellPosition.y][
+              topNeighborCellPosition.x + 1
+            ]
+          : undefined
+        : undefined;
+    const topNeighborRightNeighborCellPosition = {
+      x: topNeighborCellPosition.x + 1,
+      y: topNeighborCellPosition.y,
+    };
+    const topNeighborLeftNeighborCell =
+      currentBoard[topNeighborCellPosition.y] !== undefined
+        ? currentBoard[topNeighborCellPosition.y][
+            topNeighborCellPosition.x - 1
+          ] !== undefined
+          ? currentBoard[topNeighborCellPosition.y][
+              topNeighborCellPosition.x - 1
+            ]
+          : undefined
+        : undefined;
+    const topNeighborLeftNeighborCellPosition = {
+      x: topNeighborCellPosition.x - 1,
+      y: topNeighborCellPosition.y,
+    };
+    searchSameColorNeighbors({
+      currentBoard,
+      currentGroupOfSameColorCells,
+      currentCell: topNeighborCell,
+      currentCellPosition: topNeighborCellPosition,
+      topNeighborCell: topNeighborTopNeighborCell,
+      topNeighborCellPosition: topNeighborTopNeighborCellPosition,
+      rightNeighborCell: topNeighborRightNeighborCell,
+      rightNeighborCellPosition: topNeighborRightNeighborCellPosition,
+      bottomNeighborCell: currentCell,
+      bottomNeighborCellPosition: {
+        x: currentCellPosition.x,
+        y: currentCellPosition.y,
+      },
+      leftNeighborCell: topNeighborLeftNeighborCell,
+      leftNeighborCellPosition: topNeighborLeftNeighborCellPosition,
+    });
+  }
+  // Check right cell recursive
+  if (
+    currentCell === rightNeighborCell &&
+    currentGroupOfSameColorCells.some((position) => {
+      return (
+        position.x === rightNeighborCellPosition.x &&
+        position.y === rightNeighborCellPosition.y
+      );
+    }) === false
+  ) {
+    currentGroupOfSameColorCells.push(rightNeighborCellPosition);
+    const rightNeighborRightNeighborCell =
+      currentBoard[rightNeighborCellPosition.y] !== undefined
+        ? currentBoard[rightNeighborCellPosition.y][
+            rightNeighborCellPosition.x + 1
+          ] !== undefined
+          ? currentBoard[rightNeighborCellPosition.y][
+              rightNeighborCellPosition.x + 1
+            ]
+          : undefined
+        : undefined;
+    const rightNeighborRightNeighborCellPosition = {
+      x: rightNeighborCellPosition.x + 1,
+      y: rightNeighborCellPosition.y,
+    };
+    const rightNeighborTopNeighborCell =
+      currentBoard[rightNeighborCellPosition.y - 1] !== undefined
+        ? currentBoard[rightNeighborCellPosition.y - 1][
+            rightNeighborCellPosition.x
+          ] !== undefined
+          ? currentBoard[rightNeighborCellPosition.y - 1][
+              rightNeighborCellPosition.x
+            ]
+          : undefined
+        : undefined;
+    const rightNeighborTopNeighborCellPosition = {
+      x: rightNeighborCellPosition.x,
+      y: rightNeighborCellPosition.y - 1,
+    };
+    const rightNeighborBottomNeighborCell =
+      currentBoard[rightNeighborCellPosition.y + 1] !== undefined
+        ? currentBoard[rightNeighborCellPosition.y + 1][
+            rightNeighborCellPosition.x
+          ] !== undefined
+          ? currentBoard[rightNeighborCellPosition.y + 1][
+              rightNeighborCellPosition.x
+            ]
+          : undefined
+        : undefined;
+    const rightNeighborBottomNeighborCellPosition = {
+      x: rightNeighborCellPosition.x,
+      y: rightNeighborCellPosition.y + 1,
+    };
+    searchSameColorNeighbors({
+      currentBoard,
+      currentGroupOfSameColorCells,
+      currentCell: rightNeighborCell,
+      currentCellPosition: rightNeighborCellPosition,
+      topNeighborCell: rightNeighborTopNeighborCell,
+      topNeighborCellPosition: rightNeighborTopNeighborCellPosition,
+      rightNeighborCell: rightNeighborRightNeighborCell,
+      rightNeighborCellPosition: rightNeighborRightNeighborCellPosition,
+      bottomNeighborCell: rightNeighborBottomNeighborCell,
+      bottomNeighborCellPosition: rightNeighborBottomNeighborCellPosition,
+      leftNeighborCell: currentCell,
+      leftNeighborCellPosition: {
+        x: currentCellPosition.x,
+        y: currentCellPosition.y,
+      },
+    });
+  }
+  // Check bottom cell recursive
+  if (
+    currentCell === bottomNeighborCell &&
+    currentGroupOfSameColorCells.some((position) => {
+      return (
+        position.x === bottomNeighborCellPosition.x &&
+        position.y === bottomNeighborCellPosition.y
+      );
+    }) === false
+  ) {
+    currentGroupOfSameColorCells.push(bottomNeighborCellPosition);
+    const bottomNeighborBottomNeighborCell =
+      currentBoard[bottomNeighborCellPosition.y + 1] !== undefined
+        ? currentBoard[bottomNeighborCellPosition.y + 1][
+            bottomNeighborCellPosition.x
+          ] !== undefined
+          ? currentBoard[bottomNeighborCellPosition.y + 1][
+              bottomNeighborCellPosition.x
+            ]
+          : undefined
+        : undefined;
+    const bottomNeighborBottomNeighborCellPosition = {
+      x: bottomNeighborCellPosition.x,
+      y: bottomNeighborCellPosition.y + 1,
+    };
+    const bottomNeighborRightNeighborCell =
+      currentBoard[bottomNeighborCellPosition.y] !== undefined
+        ? currentBoard[bottomNeighborCellPosition.y][
+            bottomNeighborCellPosition.x + 1
+          ] !== undefined
+          ? currentBoard[bottomNeighborCellPosition.y][
+              bottomNeighborCellPosition.x + 1
+            ]
+          : undefined
+        : undefined;
+    const bottomNeighborRightNeighborCellPosition = {
+      x: bottomNeighborCellPosition.x + 1,
+      y: bottomNeighborCellPosition.y,
+    };
+    const bottomNeighborLeftNeighborCell =
+      currentBoard[bottomNeighborCellPosition.y] !== undefined
+        ? currentBoard[bottomNeighborCellPosition.y][
+            bottomNeighborCellPosition.x - 1
+          ] !== undefined
+          ? currentBoard[bottomNeighborCellPosition.y][
+              bottomNeighborCellPosition.x - 1
+            ]
+          : undefined
+        : undefined;
+    const bottomNeighborLeftNeighborCellPosition = {
+      x: bottomNeighborCellPosition.x - 1,
+      y: bottomNeighborCellPosition.y,
+    };
+    searchSameColorNeighbors({
+      currentBoard,
+      currentGroupOfSameColorCells,
+      currentCell: bottomNeighborCell,
+      currentCellPosition: bottomNeighborCellPosition,
+      topNeighborCell: currentCell,
+      topNeighborCellPosition: {
+        x: currentCellPosition.x,
+        y: currentCellPosition.y,
+      },
+      rightNeighborCell: bottomNeighborRightNeighborCell,
+      rightNeighborCellPosition: bottomNeighborRightNeighborCellPosition,
+      bottomNeighborCell: bottomNeighborBottomNeighborCell,
+      bottomNeighborCellPosition: bottomNeighborBottomNeighborCellPosition,
+      leftNeighborCell: bottomNeighborLeftNeighborCell,
+      leftNeighborCellPosition: bottomNeighborLeftNeighborCellPosition,
+    });
+  }
+  // Check left cell recursive
+  if (
+    currentCell === leftNeighborCell &&
+    currentGroupOfSameColorCells.some((position) => {
+      return (
+        position.x === leftNeighborCellPosition.x &&
+        position.y === leftNeighborCellPosition.y
+      );
+    }) === false
+  ) {
+    currentGroupOfSameColorCells.push(leftNeighborCellPosition);
+    const leftNeighborLeftNeighborCell =
+      currentBoard[leftNeighborCellPosition.y] !== undefined
+        ? currentBoard[leftNeighborCellPosition.y][
+            leftNeighborCellPosition.x - 1
+          ] !== undefined
+          ? currentBoard[leftNeighborCellPosition.y][
+              leftNeighborCellPosition.x - 1
+            ]
+          : undefined
+        : undefined;
+    const leftNeighborLeftNeighborCellPosition = {
+      x: leftNeighborCellPosition.x - 1,
+      y: leftNeighborCellPosition.y,
+    };
+    const leftNeighborTopNeighborCell =
+      currentBoard[leftNeighborCellPosition.y - 1] !== undefined
+        ? currentBoard[leftNeighborCellPosition.y - 1][
+            leftNeighborCellPosition.x
+          ] !== undefined
+          ? currentBoard[leftNeighborCellPosition.y - 1][
+              leftNeighborCellPosition.x
+            ]
+          : undefined
+        : undefined;
+    const leftNeighborTopNeighborCellPosition = {
+      x: leftNeighborCellPosition.x,
+      y: leftNeighborCellPosition.y - 1,
+    };
+    const leftNeighborBottomNeighborCell =
+      currentBoard[leftNeighborCellPosition.y + 1] !== undefined
+        ? currentBoard[leftNeighborCellPosition.y + 1][
+            leftNeighborCellPosition.x
+          ] !== undefined
+          ? currentBoard[leftNeighborCellPosition.y + 1][
+              leftNeighborCellPosition.x
+            ]
+          : undefined
+        : undefined;
+    const leftNeighborBottomNeighborCellPosition = {
+      x: leftNeighborCellPosition.x,
+      y: leftNeighborCellPosition.y + 1,
+    };
+    searchSameColorNeighbors({
+      currentBoard,
+      currentGroupOfSameColorCells,
+      currentCell: leftNeighborCell,
+      currentCellPosition: leftNeighborCellPosition,
+      topNeighborCell: leftNeighborTopNeighborCell,
+      topNeighborCellPosition: leftNeighborTopNeighborCellPosition,
+      rightNeighborCell: currentCell,
+      rightNeighborCellPosition: {
+        x: currentCellPosition.x,
+        y: currentCellPosition.y,
+      },
+      bottomNeighborCell: leftNeighborBottomNeighborCell,
+      bottomNeighborCellPosition: leftNeighborBottomNeighborCellPosition,
+      leftNeighborCell: leftNeighborLeftNeighborCell,
+      leftNeighborCellPosition: leftNeighborLeftNeighborCellPosition,
+    });
+  }
+}
 
-  // TODO: Calculate new board -> Remove group of cells where $NUMBER_OF_GROUPED_CELLS_TO_REMOVE cells of the same color are connected
+function getNewBoardWithRemovedCellsOfSameColor(currentBoard: Board) {
+  // Calculate new board
+  // Remove cells where $NUMBER_OF_GROUPED_CELLS_TO_REMOVE cells of the same color are connected
   // Check if there are at least $X (f.e 10) cells with the same color in one place
   // Meaning all are neighbors of each other and share the same color
   // -> If so, remove them and move all rows above down
   const alreadyCheckedGroupsOfSameColorCells: Position[][] = [];
-  const newBoard = currentBoard.map((row, rowIndex) =>
+  return currentBoard.map((row, rowIndex) =>
     row.map((cell, columnIndex) => {
       const currentGroupOfSameColorCells: Position[] = [];
       let currentCell = cell;
@@ -381,9 +680,34 @@ export function removeCellsOfSameColor(options: {
         x: columnIndex,
         y: rowIndex,
       };
-      // TODO: If currentCell is in any group of alreadyCheckedGroups
+      // Dont check if cell is empty
+      if (currentCell === 0) {
+        return 0;
+      }
+      // If currentCell is in any group of alreadyCheckedGroups
       // then return 0 if this group.length is above $NUMBER_OF_GROUPED_CELLS_TO_REMOVE
       // else return the cell value
+      // If currentCell is not in any group of alreadyCheckedGroups
+      // then searchSameColorNeighbors arround that cell
+      const alreadyCheckedGroupWithCurrentCell =
+        alreadyCheckedGroupsOfSameColorCells.find((group) => {
+          return group.some((position) => {
+            return (
+              position.x === currentCellPosition.x &&
+              position.y === currentCellPosition.y
+            );
+          });
+        });
+      if (typeof alreadyCheckedGroupWithCurrentCell !== "undefined") {
+        if (
+          alreadyCheckedGroupWithCurrentCell.length >=
+          NUMBER_OF_GROUPED_CELLS_TO_REMOVE
+        ) {
+          return 0;
+        } else {
+          return cell;
+        }
+      }
       let topNeighborCell =
         currentBoard[rowIndex - 1] !== undefined
           ? currentBoard[rowIndex - 1][columnIndex] !== undefined
@@ -420,105 +744,88 @@ export function removeCellsOfSameColor(options: {
         x: columnIndex - 1,
         y: rowIndex,
       };
-      const searchSameColorNeighbors = (options: {
-        currentCell: number | undefined;
-        currentCellPosition: Position;
-        topNeighborCell: number | undefined;
-        topNeighborCellPosition: Position;
-        rightNeighborCell: number | undefined;
-        rightNeighborCellPosition: Position;
-        bottomNeighborCell: number | undefined;
-        bottomNeighborCellPosition: Position;
-        leftNeighborCell: number | undefined;
-        leftNeighborCellPosition: Position;
-      }) => {
-        const {
-          currentCell,
-          currentCellPosition,
-          topNeighborCell,
-          topNeighborCellPosition,
-          rightNeighborCell,
-          rightNeighborCellPosition,
-          bottomNeighborCell,
-          bottomNeighborCellPosition,
-          leftNeighborCell,
-          leftNeighborCellPosition,
-        } = options;
-        if (
-          currentCell === topNeighborCell &&
-          currentGroupOfSameColorCells.includes(topNeighborCellPosition) ===
-            false
-        ) {
-          currentGroupOfSameColorCells.push(topNeighborCellPosition);
-          const topNeighborTopNeighborCell =
-            currentBoard[topNeighborCellPosition.y - 1] !== undefined
-              ? currentBoard[topNeighborCellPosition.y - 1][
-                  topNeighborCellPosition.x
-                ] !== undefined
-                ? currentBoard[topNeighborCellPosition.y - 1][
-                    topNeighborCellPosition.x
-                  ]
-                : undefined
-              : undefined;
-          const topNeighborTopNeighborCellPosition = {
-            x: topNeighborCellPosition.x,
-            y: topNeighborCellPosition.y - 1,
-          };
-          const topNeighborRightNeighborCell =
-            currentBoard[topNeighborCellPosition.y] !== undefined
-              ? currentBoard[topNeighborCellPosition.y][
-                  topNeighborCellPosition.x + 1
-                ] !== undefined
-                ? currentBoard[topNeighborCellPosition.y][
-                    topNeighborCellPosition.x + 1
-                  ]
-                : undefined
-              : undefined;
-          const topNeighborRightNeighborCellPosition = {
-            x: topNeighborCellPosition.x + 1,
-            y: topNeighborCellPosition.y,
-          };
-          const topNeighborLeftNeighborCell =
-            currentBoard[topNeighborCellPosition.y] !== undefined
-              ? currentBoard[topNeighborCellPosition.y][
-                  topNeighborCellPosition.x - 1
-                ] !== undefined
-                ? currentBoard[topNeighborCellPosition.y][
-                    topNeighborCellPosition.x - 1
-                  ]
-                : undefined
-              : undefined;
-          const topNeighborLeftNeighborCellPosition = {
-            x: topNeighborCellPosition.x - 1,
-            y: topNeighborCellPosition.y,
-          };
-          searchSameColorNeighbors({
-            currentCell: topNeighborCell,
-            currentCellPosition: topNeighborCellPosition,
-            topNeighborCell: topNeighborTopNeighborCell,
-            topNeighborCellPosition: topNeighborTopNeighborCellPosition,
-            rightNeighborCell: topNeighborRightNeighborCell,
-            rightNeighborCellPosition: topNeighborRightNeighborCellPosition,
-            bottomNeighborCell: currentCell,
-            bottomNeighborCellPosition: {
-              x: currentCellPosition.x,
-              y: currentCellPosition.y,
-            },
-            leftNeighborCell: topNeighborLeftNeighborCell,
-            leftNeighborCellPosition: topNeighborLeftNeighborCellPosition,
-          });
-        }
-        // TODO: Implement the same for right, bottom and left
-      };
-      // TODO: Check if currentGroupOfSameColorCells.length >= $NUMBER_OF_GROUPED_CELLS_TO_REMOVE
-      // If so return 0 and add the group to all checked groups
+      // search group of same color cells arround current cell
+      searchSameColorNeighbors({
+        currentBoard,
+        currentGroupOfSameColorCells,
+        currentCell,
+        currentCellPosition,
+        topNeighborCell,
+        topNeighborCellPosition,
+        rightNeighborCell,
+        rightNeighborCellPosition,
+        bottomNeighborCell,
+        bottomNeighborCellPosition,
+        leftNeighborCell,
+        leftNeighborCellPosition,
+      });
+      alreadyCheckedGroupsOfSameColorCells.push(currentGroupOfSameColorCells);
+      // Check if currentGroupOfSameColorCells.length >= $NUMBER_OF_GROUPED_CELLS_TO_REMOVE
+      // If so return 0
       // Else return cell
-
-      // TODO: Down movement of above cells and checking again for new groups that have been built due to this movement
-
-      return cell;
+      if (
+        currentGroupOfSameColorCells.length >= NUMBER_OF_GROUPED_CELLS_TO_REMOVE
+      ) {
+        return 0;
+      } else {
+        return cell;
+      }
     })
   );
+}
+
+function isSomeCellNotAtBottom(board: Board) {
+  return board.some((row, rowIndex) =>
+    row.some((cell, columnIndex) => {
+      if (cell === 0) {
+        return false;
+      }
+      const bottomNeighborCell =
+        board[rowIndex + 1] !== undefined
+          ? board[rowIndex + 1][columnIndex] !== undefined
+            ? board[rowIndex + 1][columnIndex]
+            : undefined
+          : undefined;
+      return bottomNeighborCell === 0;
+    })
+  );
+}
+
+export function removeCellsOfSameColor(options: {
+  board: Board;
+  boardCellElements: BoardCellElements;
+  cellsToUpdate: CellsToUpdate;
+  block: Block;
+  position: Position;
+  gameStatus: GameStatus;
+}) {
+  const {
+    board,
+    boardCellElements,
+    cellsToUpdate,
+    block,
+    position,
+    gameStatus,
+  } = options;
+  const currentBoard = board.map((row) => row.slice());
+  let newBoard = getNewBoardWithRemovedCellsOfSameColor(currentBoard);
+  // Check if any cell is not at the bottom
+  // meaning some cells bottom neighbor is 0
+  while (isSomeCellNotAtBottom(newBoard) === true) {
+    // Move all cells to te bottom
+    newBoard = transposeMatrix(
+      transposeMatrix(newBoard).map((column) => {
+        return column.sort((a, b) => {
+          // cells that are not 0 should be sorted to bottom
+          if (b !== 0) {
+            return -1;
+          }
+          return 1;
+        });
+      })
+    );
+    newBoard = getNewBoardWithRemovedCellsOfSameColor(newBoard);
+  }
 
   const newCellsToUpdate = boardCellElements
     .map((row, rowIndex) =>
@@ -546,7 +853,7 @@ export function removeCellsOfSameColor(options: {
           element: cellElement,
           className: `${
             cellColors[newBoard[rowIndex][columnIndex]] || FALLBACK_CELL_COLOR
-          } ${CELL_WIDTH_CLASS_NAME} ${CELL_HEIGHT_CLASS_NAME} ${CELL_BASE_CLASS_NAME}`,
+          } ${CELL_WIDTH_CLASS_NAME} ${CELL_HEIGHT_CLASS_NAME} ${CELL_BASE_CLASS_NAME} transition-all duration-1000`,
         };
       })
     )
