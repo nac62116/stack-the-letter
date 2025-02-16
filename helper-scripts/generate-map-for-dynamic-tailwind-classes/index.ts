@@ -14,7 +14,7 @@ program.requiredOption(
 
 program.requiredOption(
   "-t, --templateString <templateString>",
-  "The tailwind class you want to generate a map for. '<>' used as placeholders. Please also use quotes as needed and wrap the option inside single quotes. f.e. '\"w-[<range>px]\"' or '\"<range>\": \"repeat(<range>, minmax(0, 1fr))\"'"
+  "The tailwind class you want to generate a map for. '<>' used as placeholders. Please also use quotes as needed and wrap the option inside single quotes. f.e. '\"w-[<range>px]\"' or '--grid-template-columns-<range>: repeat(<range>, minmax(0, 1fr))'"
 );
 
 program.requiredOption(
