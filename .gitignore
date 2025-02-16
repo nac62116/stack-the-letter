@@ -7,3 +7,6 @@ build/
 
 # Environment
 .env
+
+# Letters (Until they are in a database)
+letters/

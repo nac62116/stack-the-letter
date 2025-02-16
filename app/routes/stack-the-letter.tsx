@@ -37,6 +37,7 @@ import {
 } from "~/shared/stack-the-letter-builder";
 import { cellColors } from "~/shared/dynamic-cell-color-map";
 import { Letter } from "~/components/Letter";
+import { ronjasLetter } from "letters/ronja";
 
 export function meta({
   data: {
@@ -50,16 +51,33 @@ export function meta({
   ];
 }
 
-export async function loader({}: Route.LoaderArgs) {
+export async function loader({ request }: Route.LoaderArgs) {
   // FEATURE: Let users write their own letters
   // FEATURE: New setting: Let user choose their own color palette
   const author = "Colin";
-  const letter = {
-    salutation: "Liebe Momi,",
+
+  const defaultLetter = {
+    salutation: "Hey there,",
     message:
-      "es ist sehr schön bei dir zu Besuch zu sein. Danke für deine Herzlichkeit und die schönen Gespräche mit dir. Bei dir fühle ich mich immer sehr wohl und das Essen ist wie man es sich bei seiner Oma vorstellt: Großartig! Bleib so wie du bist.",
-    regards: "Sonnige Grüße, Colin",
+      "i am Colin and i made this app. Its licensed under MIT if you want to use it for your own projects. I hope you enjoy it. Soon you will be able to write your own letters and choose your own color palette.",
+    regards: "Greetings, Colin",
   } as const;
+
+  let letter: typeof defaultLetter | typeof ronjasLetter;
+  const accessToken = new URL(request.url).searchParams.get("accessToken");
+  if (accessToken === process.env.ACCESS_TOKEN_RONJA) {
+    letter = ronjasLetter;
+  } else if (accessToken === process.env.ACCESS_TOKEN_PETER) {
+    letter = defaultLetter;
+  } else if (accessToken === process.env.ACCESS_TOKEN_MINT_VERNETZT_TEAM) {
+    letter = defaultLetter;
+  } else if (accessToken === process.env.ACCESS_TOKEN_LUKI_LEON) {
+    letter = defaultLetter;
+  } else if (accessToken === process.env.ACCESS_TOKEN_JAN) {
+    letter = defaultLetter;
+  } else {
+    letter = defaultLetter;
+  }
 
   return {
     author,
