@@ -1,5 +1,20 @@
 @import 'tailwindcss';
-
+/** Board size is currently capped to 1280x720 pixel resolution.
+  * This size leads to ...
+  * ... Math.floor((1280 + $CELL_GAP) / ($CELL_WIDTH + $CELL_GAP)) ...
+  * ... * Math.floor((720 + $CELL_GAP) / ($CELL_WIDTH + $CELL_GAP)) ...
+  * ... Cells.
+  * Example:
+  * $CELL_WIDTH = 4
+  * $CELL_GAP = 2
+  * 214 * 120 = 25680 cells
+  * At this moment i don't want to make it more performance heavy.
+  * This cap is realized by ...
+  * ... the dynamic-grid-map.ts file ...
+  * ... the tailwind.config.ts file ...
+  * ... and the board size initialization in Board.tsx.
+  */
+  /* Objects generated via helper-scripts/generate-map-for-dynamic-tailwind-classes */
 @theme {
   --grid-template-columns-13: repeat(13, minmax(0, 1fr));
   --grid-template-columns-14: repeat(14, minmax(0, 1fr));
@@ -312,24 +327,6 @@
   --grid-template-rows-118: repeat(118, minmax(0, 1fr));
   --grid-template-rows-119: repeat(119, minmax(0, 1fr));
   --grid-template-rows-120: repeat(120, minmax(0, 1fr));
-}
-
-/*
-  The default border color has changed to `currentColor` in Tailwind CSS v4,
-  so we've added these compatibility styles to make sure everything still
-  looks the same as it did with Tailwind CSS v3.
-
-  If we ever want to remove these styles, we need to add an explicit border
-  color utility to any element that depends on these defaults.
-*/
-@layer base {
-  *,
-  ::after,
-  ::before,
-  ::backdrop,
-  ::file-selector-button {
-    border-color: var(--color-gray-200, currentColor);
-  }
 }
 
 html,
