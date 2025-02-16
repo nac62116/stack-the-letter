@@ -1,7 +1,10 @@
 .react-router
 build
+helper-scripts
 node_modules
-README_REACT_ROUTER.md
-README.md
 .env
 .nvmrc
+compose.yml
+LICENSE
+README_REACT_ROUTER.md
+README.md

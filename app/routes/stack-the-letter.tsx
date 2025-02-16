@@ -56,6 +56,7 @@ export function meta({
 export async function loader({ request }: Route.LoaderArgs) {
   // FEATURE: Let users write their own letters
   // FEATURE: New setting: Let user choose their own color palette
+  // FEATURE: Mobile controls
   const author = "Colin";
 
   const defaultLetter = {
@@ -786,9 +787,9 @@ export default function StackTheLetter({ loaderData }: Route.ComponentProps) {
               className="absolute w-0 h-0 opacity-0"
               defaultChecked={false}
             />
-            <div className="absolute h-dvh inset-0">
-              <div className="relative w-full h-full">
-                <footer className="hidden group-has-checked:flex absolute bottom-4 right-4 gap-2">
+            <div className="absolute h-dvh inset-0 pointer-events-none">
+              <div className="relative w-full h-full pointer-events-none">
+                <footer className="hidden group-has-checked:flex absolute bottom-4 right-4 gap-2 pointer-events-auto">
                   <span>Made with ❤️ by Colin</span>
                   <span>-</span>
                   <Link
