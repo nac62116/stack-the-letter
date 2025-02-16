@@ -7,6 +7,7 @@ services:
     restart: unless-stopped
     build:
       context: .
+      dockerfile: Dockerfile
       args:
         NODE_VERSION: ${NODE_VERSION}
         NPM_VERSION: ${NPM_VERSION}
@@ -18,9 +19,13 @@ services:
       - app-network
 
   nginx:
-    image: nginx:latest
+    container_name: nginx
+    restart: unless-stopped
+    build:
+      context: .
+      dockerfile: ./nginx/Dockerfile
     volumes:
-      - /etc/nginx/sites-available/westminster-abi.org:/etc/nginx/conf.d/default.conf:ro
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
       - /etc/letsencrypt:/etc/letsencrypt:ro
     ports:
       - "80:80"
