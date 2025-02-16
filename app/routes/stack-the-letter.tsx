@@ -38,6 +38,8 @@ import {
 import { cellColorClassNames } from "~/shared/dynamic-cell-color-map";
 import { Letter } from "~/components/Letter";
 import { ronjasLetter } from "letters/ronja";
+import { GitHubLogo } from "~/components/logos/GitHubLogo";
+import { Link } from "react-router";
 
 export function meta({
   data: {
@@ -59,7 +61,7 @@ export async function loader({ request }: Route.LoaderArgs) {
   const defaultLetter = {
     salutation: "Hey there,",
     message:
-      "i'm Colin and i made this app. Its licensed under MIT if you want to use it for your own projects. I hope you enjoy it. Soon you will be able to write your own letters and choose your own color palette.",
+      "i'm Colin and i made this app. I hope you enjoy it. Soon you will be able to write your own letters and choose your own color palette.",
     regards: "Greetings, Colin",
   } as const;
 
@@ -784,6 +786,23 @@ export default function StackTheLetter({ loaderData }: Route.ComponentProps) {
               className="absolute w-0 h-0 opacity-0"
               defaultChecked={false}
             />
+            <div className="absolute h-dvh inset-0">
+              <div className="relative w-full h-full">
+                <footer className="hidden group-has-checked:flex absolute bottom-4 right-4 gap-2">
+                  <span>Made with ❤️ by Colin</span>
+                  <span>-</span>
+                  <Link
+                    to="https://github.com/nac62116/stack-the-letter"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label="GitHub Repository - Stack The Letter"
+                    className="flex items-end justify-center"
+                  >
+                    <GitHubLogo />
+                  </Link>
+                </footer>
+              </div>
+            </div>
           </div>
         </nav>
       </header>
