@@ -697,14 +697,14 @@ export default function StackTheLetter({ loaderData }: Route.ComponentProps) {
           </button>
         </div>
       </div>
-      <header className="absolute top-0 w-full h-8 pb-1 flex justify-between items-center gap-4 px-4 bg-gradient-to-r from-emerald-950 from-1% via-transparent via-50% to-emerald-950 to-99%">
+      <header className="absolute top-0 w-full h-8 pb-1 flex justify-between items-center gap-4 px-4 bg-linear-to-r from-emerald-950 from-1% via-transparent via-50% to-emerald-950 to-99%">
         <h1 className="text-nowrap">
           Stack The Letter
           {boardLoaded.current === false ? " - Loading..." : ""}
         </h1>
         <nav className="w-full flex justify-end">
           <div className="flex items-center group">
-            <div className="absolute h-dvh inset-0 bg-emerald-950 bg-opacity-70 group-has-[:checked]:flex hidden justify-center items-center">
+            <div className="absolute h-dvh inset-0 bg-emerald-950 bg-opacity-70 group-has-checked:flex hidden justify-center items-center">
               <section className="flex flex-col gap-2 border border-gray-600 bg-black p-4 rounded-xl">
                 <h2 className="text-2xl text-start">How to play?</h2>
                 <ul className="text-left">
@@ -726,7 +726,7 @@ export default function StackTheLetter({ loaderData }: Route.ComponentProps) {
             </div>
             <label
               htmlFor="how-to-play"
-              className="relative cursor-pointer group-has-[:checked]:absolute group-has-[:checked]:inset-0 group-has-[:checked]:h-dvh group-has-[:checked]:text-end group-has-[:checked]:pr-4 group-has-[:checked]:pt-[2px]"
+              className="relative cursor-pointer group-has-checked:absolute group-has-checked:inset-0 group-has-checked:h-dvh group-has-checked:text-end group-has-checked:pr-4 group-has-checked:pt-[2px]"
             >
               How to play?
             </label>
