@@ -569,7 +569,16 @@ export default function StackTheLetter({ loaderData }: Route.ComponentProps) {
           }
         }
         if (nextStep) {
-          window.requestAnimationFrame(step);
+          if (
+            typeof movementResult !== "undefined" &&
+            movementResult.gameStatus === "nextBlockPlease"
+          ) {
+            setTimeout(() => {
+              window.requestAnimationFrame(step);
+            }, 500);
+          } else {
+            window.requestAnimationFrame(step);
+          }
         }
       } else {
         console.error("Started game loop without loaded board");
