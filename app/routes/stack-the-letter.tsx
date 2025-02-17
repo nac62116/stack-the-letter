@@ -40,6 +40,8 @@ import { Letter } from "~/components/Letter";
 import { ronjasLetter } from "letters/ronja";
 import { GitHubLogo } from "~/components/logos/GitHubLogo";
 import { Link } from "react-router";
+import { petersLetter } from "letters/peter";
+import { mintvernetztTeamLetter } from "letters/mintvernetzt-team";
 
 export function meta({
   data: {
@@ -66,14 +68,18 @@ export async function loader({ request }: Route.LoaderArgs) {
     regards: "Greetings, Colin",
   } as const;
 
-  let letter: typeof defaultLetter | typeof ronjasLetter;
+  let letter:
+    | typeof defaultLetter
+    | typeof ronjasLetter
+    | typeof petersLetter
+    | typeof mintvernetztTeamLetter;
   const accessToken = new URL(request.url).searchParams.get("accessToken");
   if (accessToken === process.env.ACCESS_TOKEN_RONJA) {
     letter = ronjasLetter;
   } else if (accessToken === process.env.ACCESS_TOKEN_PETER) {
-    letter = defaultLetter;
+    letter = petersLetter;
   } else if (accessToken === process.env.ACCESS_TOKEN_MINT_VERNETZT_TEAM) {
-    letter = defaultLetter;
+    letter = mintvernetztTeamLetter;
   } else if (accessToken === process.env.ACCESS_TOKEN_LUKI_LEON) {
     letter = defaultLetter;
   } else if (accessToken === process.env.ACCESS_TOKEN_JAN) {
