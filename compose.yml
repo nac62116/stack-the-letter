@@ -18,7 +18,7 @@ services:
     networks:
       - app-network
 
-  nginx:
+  nginx-service:
     container_name: nginx
     restart: unless-stopped
     build:
