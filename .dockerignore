@@ -3,8 +3,13 @@ build
 helper-scripts
 node_modules
 .env
+.env.*
+.git
+.gitignore
 .nvmrc
+Dockerfile
 compose.yml
 LICENSE
 README_REACT_ROUTER.md
 README.md
+nginx
